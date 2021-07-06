@@ -6,6 +6,7 @@
 ### 필수 스펙
 - Producer
   + Topic 을 지정하여 message publish
+  + multiple producer
   + 메세지 publish 순서 보장. 예외가 발생하는 케이스를 제외하고 같은 topic 에 publish 할 경우 먼저 publish API 를 호출한 메세지가 먼저 broker 에 전달되야 한다.
 - Consumer
   + 지정한 Topic 의 message consume
