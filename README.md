@@ -14,11 +14,11 @@
   + Consumer Group 기능(자세한 설명은 [link](https://www.popit.kr/kafka-consumer-group/) 참고)
   + Partition Ownership(같은 Consumer Group 일 경우 Partition 을 점유한 consumer 만 message 를 consume 할 수 있다.)
 - Broker 
+  + multiple partitions
   + Message 수신 및 저장. Consume 기능
   + Consumer Group 및 offset 등의 metadata 관리(zookeeper 혹은 그외의 다른 솔루션 사용 가능)  
 
 ### 선택적 스펙
-+ multiple partitions
 + Replica 및 Broker Fail Over.
 + zookeeper 가 아닌 다른 분산 코디네이터 사용 혹은 직접 구현.
 + 기타 kafka 이슈 개선.
