@@ -3,6 +3,7 @@ package brokerServer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import manager.FileManager;
 import model.ProducerRecord;
 import model.request.RequestTopicMetaData;
 import org.apache.log4j.Logger;
@@ -22,12 +23,12 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
             ctx.channel().writeAndFlush(DataUtil.parsingObjectToByteBuf("Object is null"));
         }
         else if (obj instanceof RequestTopicMetaData) {
-            //topicMetaData 읽어오기
+            FileManager.getInstance().readTopicMetaData(ctx);
         }
         else if (obj instanceof ProducerRecord) {
             //message 토픽 파티션에 파일로 저장하기
             logger.info("record 저장 ");
-
+            FileManager.getInstance().writeTopicMetaData(ctx,(ProducerRecord)obj);
         }
     }
 
