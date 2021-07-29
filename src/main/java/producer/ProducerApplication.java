@@ -11,13 +11,12 @@ public class ProducerApplication {
 
         kafkaProducer.start().addListener(future -> {
             if (future.isSuccess()) {
-                kafkaProducer.send(null, "this is test");
+                kafkaProducer.send("daily-report-topic",1, "this is test");
 
             }
             else
-                System.out.println(future.cause().getMessage());
+              logger.trace(future.cause().getStackTrace());
         });
-
     }
 }
 

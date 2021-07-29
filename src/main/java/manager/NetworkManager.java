@@ -24,7 +24,7 @@ public class NetworkManager {
     }
 
     public static NetworkManager getInstance(){
-        return InnerNetworkSingleton.networkManager;
+        return SingleTonNetworkManager.networkManager;
     }
 
     public Bootstrap createProducerClient(EventLoopGroup eventLoopGroup, String host, int port) throws Exception {
@@ -54,7 +54,7 @@ public class NetworkManager {
         return bootstrap;
     }
 
-    private static class InnerNetworkSingleton {
+    private static class SingleTonNetworkManager {
         public static final NetworkManager networkManager = new NetworkManager();
     }
 
