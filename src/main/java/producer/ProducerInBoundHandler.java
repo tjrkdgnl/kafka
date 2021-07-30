@@ -18,6 +18,8 @@ public class ProducerInBoundHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+
+
         Object obj = DataUtil.parsingBufToObject((ByteBuf)msg);
 
        if(obj instanceof ResponseTopicData){

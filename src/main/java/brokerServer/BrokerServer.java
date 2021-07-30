@@ -5,15 +5,29 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import manager.NetworkManager;
+import org.apache.commons.lang3.StringUtils;
+
+import java.util.HashMap;
 
 public class BrokerServer {
-
     private final String host;
     private final int port;
+    public static HashMap<String, String> properties;
+    private ChannelFuture channelFuture;
 
-    public BrokerServer(String host,int port) throws Exception {
-       this.host =host;
-       this.port =port;
+    public BrokerServer(HashMap<String,String> brokerProperties) throws Exception {
+        properties = brokerProperties;
+
+        this.host = properties.get(BrokerConfig.HOST.getValue());
+
+        if(StringUtils.isNumeric(properties.get(BrokerConfig.PORT.getValue().trim()))){
+            this.port = Integer.parseInt(properties.get(BrokerConfig.PORT.getValue()));
+        }
+        else{
+            this.port = 8888;
+            properties.put(BrokerConfig.PORT.getValue(), String.valueOf(port));
+        }
+
     }
 
     public void start() throws Exception {
@@ -22,16 +36,18 @@ public class BrokerServer {
         EventLoopGroup workerEventLoopGroup = new NioEventLoopGroup();
 
         try {
-            ServerBootstrap bootstrap = NetworkManager.getInstance().buildServer(eventLoopGroup,workerEventLoopGroup,host,port);
+            ServerBootstrap bootstrap = NetworkManager.getInstance().buildServer(eventLoopGroup, workerEventLoopGroup, host, port);
 
-            ChannelFuture cf = bootstrap.bind().sync();
+            channelFuture = bootstrap.bind().sync();
 
-            cf.channel().closeFuture().sync();
+            channelFuture.channel().closeFuture().sync();
 
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
+        }
+        finally {
             eventLoopGroup.shutdownGracefully().sync();
         }
     }
+
 }
