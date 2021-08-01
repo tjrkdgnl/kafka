@@ -10,9 +10,6 @@ import org.apache.log4j.Logger;
 import util.DataUtil;
 import util.ERROR;
 
-import java.nio.charset.Charset;
-import java.util.concurrent.Future;
-
 public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
 
     private final Logger logger = Logger.getLogger(BrokerInBoundHandler.class);
@@ -28,6 +25,7 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
             }
             else if (obj instanceof RequestTopicMetaData) {
                 logger.info("브로커가 클라이언트로부터 TopicMetadata를 요청받았습니다.");
+
 
                 RequestTopicMetaData requestTopicMetaData = (RequestTopicMetaData) obj;
 
@@ -49,6 +47,7 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
 
         } catch (Exception e) {
             logger.trace(e.getStackTrace());
+
         }
 
     }
