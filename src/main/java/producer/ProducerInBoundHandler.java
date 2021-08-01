@@ -3,14 +3,11 @@ package producer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import manager.TopicManager;
 import model.AckData;
 import model.response.ResponseTopicData;
 import org.apache.log4j.Logger;
 import util.DataUtil;
 import util.ERROR;
-
-import java.util.ArrayList;
 
 
 public class ProducerInBoundHandler extends ChannelInboundHandlerAdapter {
@@ -19,37 +16,39 @@ public class ProducerInBoundHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
+        try {
+            Object obj = DataUtil.parsingBufToObject((ByteBuf)msg);
 
-        Object obj = DataUtil.parsingBufToObject((ByteBuf)msg);
+            if(obj instanceof ResponseTopicData){
+                logger.info("프로듀서가 브로커로부터 TopicData를 받았습니다.");
+                ResponseTopicData responseTopicData = (ResponseTopicData)obj;
+                logger.info(responseTopicData.getTopicData().getTopic());
+                //클라이언트가 생성한 record의 정보를 broker로부터 얻어온 후, 전송한다
+                KafkaProducer.sender.send(ctx,responseTopicData.getRecord(),responseTopicData.getTopicData());
 
-       if(obj instanceof ResponseTopicData){
-            logger.info("프로듀서가 브로커로부터 TopicList를 받았습니다.");
-            ResponseTopicData responseTopicData = (ResponseTopicData)obj;
+            }
+            else if(obj instanceof AckData){
+                AckData ack =(AckData) obj;
 
-            if(responseTopicData.getTopicList() != null){
-                TopicManager.getInstance().setTopicList(responseTopicData.getTopicList());
+                if(ack.getStatus() == 200){
+                    logger.info(ack.getMessage());
+
+                }
+                else if(ack.getStatus() == 400){
+                    logger.error(ack.getMessage());
+                }
+                else{
+                    logger.error(ERROR.UNKNOWN_STATUS_ERROR +ack.getMessage());
+                }
             }
             else{
-                TopicManager.getInstance().setTopicList(new ArrayList<>());
+                logger.error(ERROR.UNKNOWN_ERROR);
             }
         }
-        else if(obj instanceof AckData){
-            AckData ack =(AckData) obj;
+        catch (Exception e){
+            logger.trace(e.getStackTrace());
+        }
 
-            if(ack.getStatus() == 200){
-                logger.info(ack.getMessage());
-
-            }
-            else if(ack.getStatus() == 400){
-                logger.error(ack.getMessage());
-            }
-            else{
-                logger.error(ERROR.UNKNOWN_STATUS_ERROR +ack.getMessage());
-            }
-        }
-        else{
-            logger.error(ERROR.UNKNOWN_ERROR);
-        }
     }
 
     @Override

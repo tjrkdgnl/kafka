@@ -20,11 +20,16 @@ public class ProducerRecord implements Serializable {
     private Integer partition;
     private String value;
 
-    public ProducerRecord(String topic, Integer partition, String value) {
-        this.topic = topic;
-        this.partition = partition;
-        this.value = value;
 
+    public ProducerRecord(String topic,String value){
+        this.topic =topic;
+        this.partition=null;
+        this.value=value;
+    }
+
+    public ProducerRecord(String topic, Integer partition, String value) {
+        this(topic, value);
+        this.partition = partition;
     }
 
     public String getValue() {
@@ -37,6 +42,10 @@ public class ProducerRecord implements Serializable {
 
     public Integer getPartition() {
         return partition;
+    }
+
+    public void setPartition(int partition){
+        this.partition =partition;
     }
 
 

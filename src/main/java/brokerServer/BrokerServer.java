@@ -1,29 +1,36 @@
 package brokerServer;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import manager.NetworkManager;
+import model.AckData;
+import model.ProducerRecord;
+import model.Topic;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
+import util.FileUtil;
 
+import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 
 public class BrokerServer {
+    private final Logger logger = Logger.getLogger(BrokerServer.class);
     private final String host;
     private final int port;
-    public static HashMap<String, String> properties;
-    private ChannelFuture channelFuture;
+    private static HashMap<String, String> properties;
 
-    public BrokerServer(HashMap<String,String> brokerProperties) throws Exception {
+
+    public BrokerServer(HashMap<String, String> brokerProperties) throws Exception {
         properties = brokerProperties;
 
         this.host = properties.get(BrokerConfig.HOST.getValue());
 
-        if(StringUtils.isNumeric(properties.get(BrokerConfig.PORT.getValue().trim()))){
+        if (StringUtils.isNumeric(properties.get(BrokerConfig.PORT.getValue().trim()))) {
             this.port = Integer.parseInt(properties.get(BrokerConfig.PORT.getValue()));
-        }
-        else{
+        } else {
             this.port = 8888;
             properties.put(BrokerConfig.PORT.getValue(), String.valueOf(port));
         }
@@ -38,15 +45,24 @@ public class BrokerServer {
         try {
             ServerBootstrap bootstrap = NetworkManager.getInstance().buildServer(eventLoopGroup, workerEventLoopGroup, host, port);
 
-            channelFuture = bootstrap.bind().sync();
-
-            channelFuture.channel().closeFuture().sync();
+            bootstrap.bind().sync();
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.trace(e.getStackTrace());
         }
-        finally {
-            eventLoopGroup.shutdownGracefully().sync();
+
+    }
+
+
+    public static void getTopicMetaData(ChannelHandlerContext ctx, ProducerRecord record) throws Exception {
+
+        String defaultPath = properties.get(BrokerConfig.LOG_DIRS.getValue());
+
+        if (defaultPath == null) {
+            ctx.channel().writeAndFlush(new AckData(500, "broker log directory path가 잘못 지정되었습니다."));
+
+        } else {
+            FileUtil.getInstance(Path.of(defaultPath)).getTopicMetaData(ctx,record,properties);
         }
     }
 

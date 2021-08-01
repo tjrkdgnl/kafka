@@ -1,5 +1,6 @@
 package producer;
 
+import model.ProducerRecord;
 import org.apache.log4j.Logger;
 
 public class ProducerApplication {
@@ -11,7 +12,7 @@ public class ProducerApplication {
 
         kafkaProducer.start().addListener(future -> {
             if (future.isSuccess()) {
-                kafkaProducer.send("daily-report-topic",1, "this is test");
+                kafkaProducer.send(new ProducerRecord("daily-report-topic", "this is test"));
 
             }
             else

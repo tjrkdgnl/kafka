@@ -1,6 +1,7 @@
 package brokerServer;
 
 import org.apache.commons.io.FileUtils;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -53,6 +54,13 @@ public class BrokerProperties {
                 case TOPIC_PARTITIONS:
                     properties.put(BrokerConfig.TOPIC_PARTITIONS.getValue(),"3");
                     break;
+
+                case AUTO_CREATE_TOPIC:
+                    properties.put(BrokerConfig.AUTO_CREATE_TOPIC.getValue(),"true");
+                    break;
+
+                case REPLICATION_FACTOR:
+                    properties.put(BrokerConfig.REPLICATION_FACTOR.getValue(),"3");
 
             }
         }

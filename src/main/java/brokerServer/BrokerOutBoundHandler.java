@@ -11,8 +11,16 @@ public class BrokerOutBoundHandler extends ChannelOutboundHandlerAdapter {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        logger.info("브로커가 Message를 클라이언트에게 전송했습니다.");
-        ctx.writeAndFlush(DataUtil.parsingObjectToByteBuf(msg));
+
+        ctx.writeAndFlush(DataUtil.parsingObjectToByteBuf(msg)).addListener(future -> {
+            if(future.isSuccess()){
+                logger.info("브로커가 Message를 클라이언트에게 전송했습니다.");
+
+            }
+            else{
+                logger.error(future.cause());
+            }
+        });
     }
 
 }

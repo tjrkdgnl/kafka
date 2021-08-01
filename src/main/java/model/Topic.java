@@ -1,5 +1,8 @@
 package model;
 
+
+import org.apache.commons.lang3.builder.ToStringBuilder;
+
 import java.io.Serializable;
 import java.util.HashMap;
 
@@ -16,6 +19,10 @@ public class Topic implements Serializable {
     private String topic;
     private int partitions;
     private HashMap<String,Integer> partitionLeaderMap;
+
+    public Topic(){
+
+    }
 
     public Topic(String topic,int partitions){
         this.topic = topic;
@@ -42,4 +49,18 @@ public class Topic implements Serializable {
         return partitionLeaderMap.get(brokerId);
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        Topic newTopic = (Topic) obj;
+
+        if(topic.equals(newTopic.topic))
+            return true;
+
+        return false;
+    }
+
+    @Override
+    public String toString() {
+        return ToStringBuilder.reflectionToString(this);
+    }
 }
