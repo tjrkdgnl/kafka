@@ -59,6 +59,10 @@ public class Topic implements Serializable {
         return false;
     }
 
+    public HashMap<String, Integer> getPartitionLeaderMap() {
+        return partitionLeaderMap;
+    }
+
     @Override
     public String toString() {
         return ToStringBuilder.reflectionToString(this);

@@ -9,6 +9,8 @@ import model.request.RequestTopicMetaData;
 import org.apache.log4j.Logger;
 import util.DataUtil;
 import util.ERROR;
+import util.TopicMetadataHandler;
+import java.nio.file.Path;
 
 public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
 
@@ -26,11 +28,12 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
             else if (obj instanceof RequestTopicMetaData) {
                 logger.info("브로커가 클라이언트로부터 TopicMetadata를 요청받았습니다.");
 
-
                 RequestTopicMetaData requestTopicMetaData = (RequestTopicMetaData) obj;
 
                 //현재 파일로 관리하고 있는 topic list를 읽어온다
-                BrokerServer.getTopicMetaData(ctx, requestTopicMetaData.producerRecord());
+                String defaultPath = BrokerServer.properties.getProperty(BrokerConfig.LOG_DIRS.getValue());
+
+               new TopicMetadataHandler(Path.of(defaultPath)).getTopicMetaData(ctx, requestTopicMetaData.producerRecord(),BrokerServer.properties);
 
             }
             else if (obj instanceof ProducerRecord) {
@@ -46,15 +49,14 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
             }
 
         } catch (Exception e) {
-            logger.trace(e.getStackTrace());
-
+            logger.error("client로부터 받은 msg object를 parsing 하던 중, 문제가 발생했습니다.",e);
         }
 
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        cause.printStackTrace();
+        logger.error("InboundHandler error",cause);
         ctx.close();
     }
 }

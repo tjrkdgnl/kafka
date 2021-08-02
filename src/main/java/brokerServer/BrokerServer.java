@@ -1,40 +1,27 @@
 package brokerServer;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import manager.NetworkManager;
-import model.AckData;
-import model.ProducerRecord;
-import model.Topic;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
-import util.FileUtil;
 
-import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.List;
+import java.util.Properties;
 
 public class BrokerServer {
     private final Logger logger = Logger.getLogger(BrokerServer.class);
     private final String host;
     private final int port;
-    private static HashMap<String, String> properties;
+    public static Properties properties;
 
 
-    public BrokerServer(HashMap<String, String> brokerProperties) throws Exception {
+    public BrokerServer(Properties brokerProperties) throws Exception {
         properties = brokerProperties;
 
-        this.host = properties.get(BrokerConfig.HOST.getValue());
-
-        if (StringUtils.isNumeric(properties.get(BrokerConfig.PORT.getValue().trim()))) {
-            this.port = Integer.parseInt(properties.get(BrokerConfig.PORT.getValue()));
-        } else {
-            this.port = 8888;
-            properties.put(BrokerConfig.PORT.getValue(), String.valueOf(port));
-        }
-
+        this.host = properties.getProperty(BrokerConfig.HOST.getValue());
+        this.port = Integer.parseInt(properties.getProperty(BrokerConfig.PORT.getValue()));
     }
 
     public void start() throws Exception {
@@ -48,21 +35,7 @@ public class BrokerServer {
             bootstrap.bind().sync();
 
         } catch (Exception e) {
-            logger.trace(e.getStackTrace());
-        }
-
-    }
-
-
-    public static void getTopicMetaData(ChannelHandlerContext ctx, ProducerRecord record) throws Exception {
-
-        String defaultPath = properties.get(BrokerConfig.LOG_DIRS.getValue());
-
-        if (defaultPath == null) {
-            ctx.channel().writeAndFlush(new AckData(500, "broker log directory path가 잘못 지정되었습니다."));
-
-        } else {
-            FileUtil.getInstance(Path.of(defaultPath)).getTopicMetaData(ctx,record,properties);
+            logger.error("broker server를 실행하던 중 문제가 발생했습니다.",e);
         }
     }
 

@@ -18,7 +18,7 @@ public class BrokerOutBoundHandler extends ChannelOutboundHandlerAdapter {
 
             }
             else{
-                logger.error(future.cause());
+                logger.error("msg를 클라이언트에게 전송하는 중, 문제가 발생했습니다.",future.cause());
             }
         });
     }

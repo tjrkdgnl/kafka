@@ -8,7 +8,6 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import manager.NetworkManager;
 import model.ProducerRecord;
-import model.request.RequestTopicMetaData;
 import org.apache.log4j.Logger;
 
 public class KafkaProducer {
@@ -42,7 +41,7 @@ public class KafkaProducer {
             return channelFuture;
 
         } catch (Exception e) {
-            logger.trace(e.getStackTrace());
+            logger.error("클라이언트를 실행하던 중 문제가 발생했습니다.",e);
         }
 
         return null;
@@ -50,6 +49,6 @@ public class KafkaProducer {
 
 
     public void send(ProducerRecord record)  {
-        channelFuture.channel().writeAndFlush(new RequestTopicMetaData(record));
+        sender.getTopicMetaData(channelFuture,record);
     }
 }

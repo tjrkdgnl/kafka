@@ -15,24 +15,17 @@ import java.io.Serializable;
  * @Variable record: 클라이언트가 요청한 record. netty의 특성으로 outBound로부터 전송된 record를 inBoundHandler가
  * 알 수 있어야 하기때문에 클라이언트가 요청한 record도 같이 전송한다
  */
-public class ResponseTopicData implements Serializable {
+public class ResponseTopicMetadata implements Serializable {
 
-    private final Topic topicData;
-    private final ProducerRecord record;
+    private final Topic topicMetadata;
 
-    public ResponseTopicData(Topic topic,ProducerRecord record) {
-        this.topicData = topic;
-        this.record =record;
+    public ResponseTopicMetadata(Topic topicMetadata) {
+        this.topicMetadata = topicMetadata;
+
     }
 
-    public ProducerRecord getRecord(){
-        return record;
+    public Topic getTopicMetadata() {
+        return topicMetadata;
     }
-
-    public Topic getTopicData() {
-        return topicData;
-    }
-
-
 
 }

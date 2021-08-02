@@ -16,7 +16,7 @@ public class ProducerApplication {
 
             }
             else
-              logger.trace(future.cause().getStackTrace());
+              logger.error(future.cause().getStackTrace());
         });
     }
 }
