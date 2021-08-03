@@ -12,7 +12,7 @@ public class ProducerApplication {
 
         kafkaProducer.start().addListener(future -> {
             if (future.isSuccess()) {
-                kafkaProducer.send(new ProducerRecord("daily-report-topic", "this is test"));
+                kafkaProducer.send(new ProducerRecord("test", "this is test"));
 
             }
             else

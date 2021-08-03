@@ -43,4 +43,6 @@ abstract class AvroSerializers {
         return reader.read(null, DecoderFactory.get().binaryDecoder(value,null));
     }
 
+
+
 }

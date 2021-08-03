@@ -1,6 +1,5 @@
 package model.response;
 
-import model.ProducerRecord;
 import model.Topic;
 
 import java.io.Serializable;

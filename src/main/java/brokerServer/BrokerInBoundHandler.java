@@ -9,8 +9,8 @@ import model.request.RequestTopicMetaData;
 import org.apache.log4j.Logger;
 import util.DataUtil;
 import util.ERROR;
+import util.ProducerRecordHandler;
 import util.TopicMetadataHandler;
-import java.nio.file.Path;
 
 public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
 
@@ -30,17 +30,18 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
 
                 RequestTopicMetaData requestTopicMetaData = (RequestTopicMetaData) obj;
 
-                //현재 파일로 관리하고 있는 topic list를 읽어온다
-                String defaultPath = BrokerServer.properties.getProperty(BrokerConfig.LOG_DIRS.getValue());
-
-               new TopicMetadataHandler(Path.of(defaultPath)).getTopicMetaData(ctx, requestTopicMetaData.producerRecord(),BrokerServer.properties);
+                //토픽 데이터를 읽어온 후 클라이언트에게 전송한다
+               new TopicMetadataHandler(BrokerServer.properties)
+                       .getTopicMetaData(ctx, requestTopicMetaData.producerRecord());
 
             }
             else if (obj instanceof ProducerRecord) {
-                //ToDo message 토픽 파티션에 파일로 저장하는 로직 동작된 후 Ack 전송하기
                 logger.info("브로커가 프로듀서로부터 Record를 받았습니다.");
 
                 ProducerRecord record = (ProducerRecord) obj;
+
+                //record를 작성한 후 client에게 전송한다
+                new ProducerRecordHandler(ctx,record).saveProducerRecord();
 
             }
             else {

@@ -11,6 +11,7 @@ import model.response.ResponseTopicMetadata;
 import org.apache.avro.Schema;
 import org.apache.avro.reflect.ReflectData;
 import org.apache.log4j.Logger;
+
 import java.io.EOFException;
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -29,12 +30,14 @@ public class TopicMetadataHandler extends AvroSerializers {
     private static final String TOPIC_LIST = "topicList";
     private final Logger logger = Logger.getLogger(TopicMetadataHandler.class);
     private final ExecutorService executorService = Executors.newFixedThreadPool(3);
+    private final Properties properties;
 
-    public TopicMetadataHandler(Path path) {
-        this.defaultPath = path;
+    public TopicMetadataHandler(Properties properties) {
+        this.defaultPath = Path.of(properties.getProperty(BrokerConfig.LOG_DIRS.getValue()));
+        this.properties =properties;
     }
 
-    public void getTopicMetaData(ChannelHandlerContext ctx, ProducerRecord record, Properties properties) throws Exception {
+    public void getTopicMetaData(ChannelHandlerContext ctx, ProducerRecord record) throws Exception {
         ctx.executor().execute(() -> {
             try {
                 Path path = Path.of(defaultPath + "/" + TOPIC_LIST);
@@ -56,10 +59,6 @@ public class TopicMetadataHandler extends AvroSerializers {
                             return;
                         }
 
-                        String autoCreateTopic = properties.getProperty(BrokerConfig.AUTO_CREATE_TOPIC.getValue());
-                        int partitions = Integer.parseInt(properties.getProperty(BrokerConfig.TOPIC_PARTITIONS.getValue()));
-                        int replicationFactor = Integer.parseInt(properties.getProperty(BrokerConfig.REPLICATION_FACTOR.getValue()));
-
                         Schema schema = ReflectData.get().getSchema(Topics.class);
 
                         try {
@@ -74,7 +73,7 @@ public class TopicMetadataHandler extends AvroSerializers {
                             }
 
                             //topics는 존재하지만 Producer Record로 들어온 topic은 존재하지 않는 경우 토픽 생성
-                            createTopic(ctx, schema, record, topics, partitions, replicationFactor, autoCreateTopic);
+                            createTopic(ctx, schema, record, topics);
 
                         } catch (EOFException e) {
                             logger.info("작성된 topicList가 존재하지 않습니다. ");
@@ -83,7 +82,7 @@ public class TopicMetadataHandler extends AvroSerializers {
 
                             //만약 요청한 토픽이 topics가 한 개도 존재하지 않으면 topic을 생성하고 client에게 전송한다
                             try {
-                                createTopic(ctx, schema, record, topics, partitions, replicationFactor, autoCreateTopic);
+                                createTopic(ctx, schema, record, topics);
 
                             } catch (Exception exception) {
                                 logger.error( exception);
@@ -106,8 +105,13 @@ public class TopicMetadataHandler extends AvroSerializers {
         });
     }
 
-    public void createTopic(ChannelHandlerContext ctx, Schema schema, ProducerRecord record, Topics topics,
-                            int partitions, int replicationFactor, String autoCreateTopic) throws Exception {
+    public void createTopic(ChannelHandlerContext ctx, Schema schema, ProducerRecord record, Topics topics) throws Exception {
+
+        String autoCreateTopic = properties.getProperty(BrokerConfig.AUTO_CREATE_TOPIC.getValue());
+        int partitions = Integer.parseInt(properties.getProperty(BrokerConfig.TOPIC_PARTITIONS.getValue()));
+        int replicationFactor = Integer.parseInt(properties.getProperty(BrokerConfig.REPLICATION_FACTOR.getValue()));
+        String brokerID = properties.getProperty(BrokerConfig.ID.getValue());
+
 
         if (autoCreateTopic.equals("false")) {
             ctx.channel().writeAndFlush(new AckData(500, "\"" + record.getTopic() + "\"" + "은 broker에 존재하지 않습니다."));
@@ -145,7 +149,7 @@ public class TopicMetadataHandler extends AvroSerializers {
 
         AsynchronousFileChannel asynchronousFileChannel = AsynchronousFileChannel.open(path, EnumSet.of(StandardOpenOption.WRITE), executorService);
 
-        asynchronousFileChannel.write(serialized, asynchronousFileChannel.size(), null, new CompletionHandler<Integer, Object>() {
+        asynchronousFileChannel.write(serialized, 0, null, new CompletionHandler<Integer, Object>() {
             @Override
             public void completed(Integer result, Object attachment) {
 
@@ -155,7 +159,6 @@ public class TopicMetadataHandler extends AvroSerializers {
                 }
 
                 ctx.channel().writeAndFlush(new ResponseTopicMetadata(newTopicMetadata));
-                logger.info("topic 생성 완료 | file size: " + file.length() + " bytes");
             }
 
             @Override
@@ -163,6 +166,5 @@ public class TopicMetadataHandler extends AvroSerializers {
                 logger.error("토픽 생성을 실행하던 중, 문제가 발생했습니다", exc);
             }
         });
-
     }
 }

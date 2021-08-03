@@ -1,5 +1,7 @@
 package model;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,5 +19,10 @@ public class Topics implements Serializable {
 
     public List<Topic> getTopicList() {
         return topicList;
+    }
+
+    @Override
+    public String toString() {
+        return ToStringBuilder.reflectionToString(this);
     }
 }
