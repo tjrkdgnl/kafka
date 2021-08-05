@@ -29,11 +29,11 @@ public class Topic implements Serializable {
         this.partitions =partitions;
     }
 
-    public Topic(String topic,int partitions,String LeaderBrokerId,int partitionOfLeader){
+    public Topic(String topic,int partitions,String leaderBrokerId,int partitionOfLeader){
         this.topic = topic;
         this.partitions =partitions;
         this.partitionLeaderMap =new HashMap<>();
-        this.partitionLeaderMap.put(LeaderBrokerId,partitionOfLeader);
+        this.partitionLeaderMap.put(leaderBrokerId,partitionOfLeader);
     }
 
 
@@ -47,16 +47,6 @@ public class Topic implements Serializable {
 
     public int getLeaderPartition(String brokerId){
         return partitionLeaderMap.get(brokerId);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        Topic newTopic = (Topic) obj;
-
-        if(topic.equals(newTopic.topic))
-            return true;
-
-        return false;
     }
 
     public HashMap<String, Integer> getPartitionLeaderMap() {

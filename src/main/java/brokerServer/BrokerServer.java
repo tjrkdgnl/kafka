@@ -4,6 +4,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import manager.NetworkManager;
+import model.Topics;
 import org.apache.log4j.Logger;
 
 import java.util.Properties;
@@ -13,13 +14,20 @@ public class BrokerServer {
     private final String host;
     private final int port;
     public static Properties properties;
-
+    public static TopicMetadataHandler topicMetadataHandler;
+    public static ProducerRecordHandler producerRecordHandler;
+    public static Topics topics;
 
     public BrokerServer(Properties brokerProperties) throws Exception {
         properties = brokerProperties;
 
         this.host = properties.getProperty(BrokerConfig.HOST.getValue());
         this.port = Integer.parseInt(properties.getProperty(BrokerConfig.PORT.getValue()));
+        topicMetadataHandler = new TopicMetadataHandler(properties);
+        producerRecordHandler = new ProducerRecordHandler(properties);
+
+        //broker server가 실행되면 topic list 정보를 얻어온다
+        topicMetadataHandler.getTopicMetaData();
     }
 
     public void start() throws Exception {

@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-abstract class AvroSerializers {
+ public class AvroSerializers {
     private final Map<Schema, DatumWriter<Object>> datumWriterChache = new ConcurrentHashMap<>();
     private final Map<Schema, DatumReader<Object>> datumReaderChache = new ConcurrentHashMap<>();
 
@@ -23,7 +23,7 @@ abstract class AvroSerializers {
         return new ReflectDatumReader<>(schema);
     }
 
-    protected byte[] getSerialization(Object value,Schema schema) throws IOException {
+    public byte[] getSerialization(Object value, Schema schema) throws IOException {
 
         DatumWriter<Object> datumWriter = datumWriterChache.computeIfAbsent(schema,v ->(DatumWriter<Object>) getDatuWriter(schema));
 

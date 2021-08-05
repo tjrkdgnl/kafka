@@ -1,12 +1,12 @@
-package util;
+package brokerServer;
 
-import brokerServer.BrokerConfig;
-import brokerServer.BrokerServer;
 import io.netty.channel.ChannelHandlerContext;
 import model.*;
 import org.apache.avro.Schema;
 import org.apache.avro.reflect.ReflectData;
 import org.apache.log4j.Logger;
+import util.AvroSerializers;
+import util.DataUtil;
 
 import java.io.EOFException;
 import java.io.File;
@@ -18,29 +18,41 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.EnumSet;
+import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class ProducerRecordHandler extends AvroSerializers {
+public class ProducerRecordHandler {
     private final Logger logger = Logger.getLogger(ProducerRecordHandler.class);
     private final String LOG = "log";
     private final String OFFSET = "offset";
-    private final ExecutorService executorService = Executors.newFixedThreadPool(8);
-    private final CompletableFuture<Object> offsetFuture = new CompletableFuture<>();
-    private final CompletableFuture<Object> recordsFuture = new CompletableFuture<>();
-    private final ProducerRecord producerRecord;
+    private final ExecutorService executorService;
+    private final CompletableFuture<Object> offsetFuture;
+    private final CompletableFuture<Object> recordsFuture;
+    private ProducerRecord producerRecord;
     private ChannelHandlerContext ctx;
     private Offsets offsets;
     private int maxSegmentSize;
-    private final Path defaultLogPath;
-    private final Path defaultOffsetPath;
-    private final Path topicPath;
-    private final Schema offsetSchema = ReflectData.get().getSchema(Offsets.class);
-    private final Schema recordsSchema = ReflectData.get().getSchema(Records.class);
+    private Path defaultLogPath;
+    private Path defaultOffsetPath;
+    private Path topicPath;
+    private final Schema offsetSchema;
+    private final Schema recordsSchema;
+    private final AvroSerializers avroSerializers;
 
+    public ProducerRecordHandler(Properties properties) {
+        int ioThread = Integer.parseInt(properties.getProperty(BrokerConfig.IO_THREAD.getValue()));
 
-    public ProducerRecordHandler(ChannelHandlerContext ctx, ProducerRecord producerRecord) {
+        executorService = Executors.newFixedThreadPool(ioThread);
+        offsetFuture = new CompletableFuture<>();
+        recordsFuture = new CompletableFuture<>();
+        offsetSchema = ReflectData.get().getSchema(Offsets.class);
+        recordsSchema = ReflectData.get().getSchema(Records.class);
+        avroSerializers = new AvroSerializers();
+    }
+
+    public ProducerRecordHandler init(ChannelHandlerContext ctx, ProducerRecord producerRecord) {
         this.ctx = ctx;
         this.maxSegmentSize = Integer.parseInt(BrokerServer.properties.getProperty(BrokerConfig.SEGMENT_BYTES.getValue()));
         this.producerRecord = producerRecord;
@@ -52,23 +64,23 @@ public class ProducerRecordHandler extends AvroSerializers {
         defaultLogPath = Path.of(topicPath + "/" + LOG + "_");
         defaultOffsetPath = Path.of(topicPath + "/" + OFFSET + "_");
 
-        if (!Files.exists(topicPath)) {
-            try {
-                Files.createDirectories(topicPath);
-                logger.info("topic directory 생성완료");
-
-                return;
-            } catch (Exception e) {
-                logger.error("topic directory를 생성하지 못했습니다", e);
-            }
-        }
+        return this;
     }
-
 
     public void saveProducerRecord() {
         //chain을 통해서 비동기적으로 파일을 offset과 records를 읽고 쓰는 작업을 실행
         CompletableFuture.supplyAsync(() -> {
             try {
+                if (!Files.exists(topicPath)) {
+                    try {
+                        Files.createDirectories(topicPath);
+                        logger.info("topic directory 생성완료");
+
+                    } catch (Exception e) {
+                        logger.error("topic directory를 생성하지 못했습니다", e);
+                    }
+                }
+
                 readOffset();
 
                 offsets = (Offsets) offsetFuture.get();
@@ -261,7 +273,7 @@ public class ProducerRecordHandler extends AvroSerializers {
                     return;
                 }
                 //파일로부터 읽어들이고 object로 변환하기
-                handlingAfterReading(byteBuffer.array(), schema, file);
+                handlingAfterReading(byteBuffer.array(), schema);
 
                 closeAsyncChannel(asynchronousFileChannel);
             }
@@ -279,7 +291,7 @@ public class ProducerRecordHandler extends AvroSerializers {
 
         AsynchronousFileChannel asynchronousFileChannel = AsynchronousFileChannel.open(file.toPath(), EnumSet.of(StandardOpenOption.WRITE), executorService);
 
-        byte[] bytes = getSerialization(value, schema);
+        byte[] bytes = avroSerializers.getSerialization(value, schema);
 
         ByteBuffer byteBuffer = ByteBuffer.allocate(bytes.length);
         byteBuffer.put(bytes);
@@ -295,7 +307,7 @@ public class ProducerRecordHandler extends AvroSerializers {
                     return;
                 }
 
-                handlingAfterWriting(schema, value);
+                handlingAfterWriting(schema);
 
                 closeAsyncChannel(asynchronousFileChannel);
             }
@@ -309,7 +321,7 @@ public class ProducerRecordHandler extends AvroSerializers {
     }
 
 
-    private void handlingAfterWriting(Schema schema, Object value) {
+    private void handlingAfterWriting(Schema schema) {
         switch (schema.getName()) {
             case "Records":
                 ctx.channel().writeAndFlush(new AckData(200, "broker가 record를 성공적으로 작성하였습니다"));
@@ -323,11 +335,11 @@ public class ProducerRecordHandler extends AvroSerializers {
     }
 
 
-    private void handlingAfterReading(byte[] bytes, Schema schema, File file) {
+    private void handlingAfterReading(byte[] bytes, Schema schema) {
         switch (schema.getName()) {
             case "Records":
                 try {
-                    Records records = (Records) getDeserialization(bytes, schema);
+                    Records records = (Records) avroSerializers.getDeserialization(bytes, schema);
                     recordsFuture.complete(records);
                     logger.info("record를 성공적으로 읽었습니다.");
                 } catch (EOFException e) {
@@ -336,7 +348,7 @@ public class ProducerRecordHandler extends AvroSerializers {
                     recordsFuture.complete(new Records());
 
                     return;
-                } catch (IOException e) {
+                } catch (Exception e) {
                     logger.error("byte[]을 Object로 변환하는 과정에서 오류가 발생했습니다.", e);
                     recordsFuture.complete(null);
                 }
@@ -345,7 +357,7 @@ public class ProducerRecordHandler extends AvroSerializers {
 
             case "Offsets":
                 try {
-                    Offsets offsets = (Offsets) getDeserialization(bytes, schema);
+                    Offsets offsets = (Offsets) avroSerializers.getDeserialization(bytes, schema);
 
                     offsetFuture.complete(offsets);
                     logger.info("성공적으로 offsets을 읽었습니다.");
@@ -353,7 +365,7 @@ public class ProducerRecordHandler extends AvroSerializers {
                     logger.info("현재 offset 파일은 값이 존재하지 않습니다");
 
                     offsetFuture.complete(new Offsets());
-                } catch (IOException e) {
+                } catch (Exception e) {
                     logger.error("byte[]을 Object로 변환하는 과정에서 오류가 발생했습니다.", e);
                     offsetFuture.complete(null);
                 }
