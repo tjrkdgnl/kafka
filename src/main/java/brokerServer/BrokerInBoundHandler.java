@@ -6,6 +6,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import model.AckData;
 import model.ProducerRecord;
 import model.Topic;
+import model.request.RequestJoinGroup;
 import model.request.RequestTopicMetaData;
 import model.response.ResponseTopicMetadata;
 import org.apache.log4j.Logger;
@@ -38,8 +39,7 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
                 }
 
                 //토픽이 존재하지 않으면 토픽을 생성한다
-                BrokerServer.topicMetadataHandler.createTopic(ctx,requestTopicMetaData.producerRecord());
-
+                BrokerServer.topicMetadataHandler.createTopic(ctx, requestTopicMetaData.producerRecord());
 
             } else if (obj instanceof ProducerRecord) {
                 logger.info("브로커가 프로듀서로부터 Record를 받았습니다.");
@@ -47,10 +47,15 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
                 ProducerRecord record = (ProducerRecord) obj;
 
                 //record를 작성한 후 client에게 전송한다
-
                 producerRecordHandler.init(ctx, record).saveProducerRecord();
 
-            }  else {
+            } else if (obj instanceof RequestJoinGroup) {
+                RequestJoinGroup requestJoinGroup = (RequestJoinGroup) obj;
+
+                //Consumer가 group에 참여
+                BrokerServer.consumerOwnershipHandler.init(ctx, requestJoinGroup).joinConsumerGroup();
+
+            } else {
                 ctx.channel().writeAndFlush(new AckData(400, ERROR.TYPE_ERROR +
                         ": 브로커에서 알 수 없는 type의 object를 받았습니다."));
             }

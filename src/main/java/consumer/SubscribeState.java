@@ -1,34 +1,46 @@
 package consumer;
 
-
 import model.TopicPartition;
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class SubscribeState {
 
-    private Set<String> subscriptions;
+    private final Set<String> subscriptions;
 
-    //토픽에 대한 offset을 관리
-    private final HashMap<TopicPartition,Integer> topicPartitionAndOffset;
+    private final Set<TopicPartition> assignedTopicWithPartition;
 
     public SubscribeState(){
-        topicPartitionAndOffset = new HashMap<>();
+        assignedTopicWithPartition = new HashSet<>();
+        subscriptions = new HashSet<>();
     }
 
-    public HashMap<TopicPartition, Integer> getTopicPartitionAndOffset() {
-        return topicPartitionAndOffset;
+    public void setAssignedTopicWithPartition(TopicPartition topicPartition){
+        this.assignedTopicWithPartition.add(topicPartition);
     }
 
     public void setSubscriptions(Set<String> topics){
-        subscriptions = topics;
+        subscriptions.addAll(topics);
     }
 
-    public String[] getSubscriptionTopics(){
-        return subscriptions.toArray(new String[subscriptions.size()-1]);
+    public List<TopicPartition> getSubscriptions(){
+        ArrayList<TopicPartition> topicPartitionArrayList =new ArrayList<>();
+
+        if(assignedTopicWithPartition.size() != 0){
+            topicPartitionArrayList.addAll(assignedTopicWithPartition);
+        }
+
+        for(String topic : subscriptions){
+            TopicPartition topicPartition =new TopicPartition(topic,-1);
+
+            if(!topicPartitionArrayList.contains(topicPartition)){
+                topicPartitionArrayList.add(topicPartition);
+            }
+        }
+
+        return topicPartitionArrayList;
     }
 
-    public void setTopicPartition(TopicPartition topicPartition, int offset) {
-        topicPartitionAndOffset.put(topicPartition,offset);
-    }
 }

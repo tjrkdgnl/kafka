@@ -15,7 +15,7 @@ public class BrokerServer {
     private final int port;
     public static Properties properties;
     public static TopicMetadataHandler topicMetadataHandler;
-    public static ProducerRecordHandler producerRecordHandler;
+    public static ConsumerOwnershipHandler consumerOwnershipHandler;
     public static Topics topics;
 
     public BrokerServer(Properties brokerProperties) throws Exception {
@@ -24,7 +24,7 @@ public class BrokerServer {
         this.host = properties.getProperty(BrokerConfig.HOST.getValue());
         this.port = Integer.parseInt(properties.getProperty(BrokerConfig.PORT.getValue()));
         topicMetadataHandler = new TopicMetadataHandler(properties);
-        producerRecordHandler = new ProducerRecordHandler(properties);
+        consumerOwnershipHandler = new ConsumerOwnershipHandler(properties);
 
         //broker server가 실행되면 topic list 정보를 얻어온다
         topicMetadataHandler.getTopicMetaData();
@@ -41,7 +41,7 @@ public class BrokerServer {
             bootstrap.bind().sync();
 
         } catch (Exception e) {
-            logger.error("broker server를 실행하던 중 문제가 발생했습니다.",e);
+            logger.error("broker server를 실행하던 중 문제가 발생했습니다.", e);
         }
     }
 

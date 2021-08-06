@@ -3,7 +3,6 @@ package consumer;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import org.apache.log4j.Logger;
 import util.DataUtil;
 
 public class ConsumerOutBoundHandler extends ChannelOutboundHandlerAdapter {
