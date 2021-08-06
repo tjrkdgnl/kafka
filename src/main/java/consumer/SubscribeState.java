@@ -1,23 +1,34 @@
 package consumer;
 
 
-import java.util.HashSet;
-import java.util.Set;
+import model.TopicPartition;
+
+import java.util.*;
 
 public class SubscribeState {
-    private  Set<String> subscription;
 
+    private Set<String> subscriptions;
+
+    //토픽에 대한 offset을 관리
+    private final HashMap<TopicPartition,Integer> topicPartitionAndOffset;
 
     public SubscribeState(){
-        subscription =new HashSet<>();
-
+        topicPartitionAndOffset = new HashMap<>();
     }
 
-    public void setSubscription(Set<String> topics) {
-        this.subscription = topics;
+    public HashMap<TopicPartition, Integer> getTopicPartitionAndOffset() {
+        return topicPartitionAndOffset;
     }
 
-    public String[] getSubscription() {
-        return subscription.toArray(new String[subscription.size()-1]);
+    public void setSubscriptions(Set<String> topics){
+        subscriptions = topics;
+    }
+
+    public String[] getSubscriptionTopics(){
+        return subscriptions.toArray(new String[subscriptions.size()-1]);
+    }
+
+    public void setTopicPartition(TopicPartition topicPartition, int offset) {
+        topicPartitionAndOffset.put(topicPartition,offset);
     }
 }

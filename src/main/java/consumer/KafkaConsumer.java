@@ -10,20 +10,23 @@ import manager.NetworkManager;
 import org.apache.log4j.Logger;
 import util.DataUtil;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Properties;
 
 public class KafkaConsumer<V> {
     private final Logger logger = Logger.getLogger(KafkaConsumer.class);
     public static Properties properties;
     private final SubscribeState subscribeState;
     private ChannelFuture channelFuture;
+    private ConsumerCoordinator consumerCoordinator;
     private final String group_id;
     private final String session_id;
 
     public KafkaConsumer(Properties properties) throws Exception {
         subscribeState = new SubscribeState();
+        consumerCoordinator = new ConsumerCoordinator();
 
         KafkaConsumer.properties = properties;
 
@@ -56,20 +59,20 @@ public class KafkaConsumer<V> {
 
     }
 
-    public void subscribe(Collection<String> topics)  {
+    public void subscribe(Collection<String> topics) {
         if (topics == null) {
             throw new NullPointerException("topics Collections is null ");
         }
-
-        if (topics.isEmpty()) {
+        else if (topics.isEmpty()) {
             this.unSubscribe();
-        } else {
-
-            subscribeState.setSubscription(new HashSet<>(topics));
+        }
+        else {
+            this.subscribeState.setSubscriptions(new HashSet<>(topics));
         }
     }
 
     private void unSubscribe() {
 
     }
+
 }

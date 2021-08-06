@@ -1,5 +1,6 @@
 package consumer;
 
+import java.util.Arrays;
 import java.util.Properties;
 
 public class ConsumerApplication {
@@ -12,6 +13,9 @@ public class ConsumerApplication {
         properties.put(ConsumerConfig.GROUP_ID.name(),"test_group");
 
         KafkaConsumer<String> kafkaConsumer =new KafkaConsumer<>(properties);
+
+
+        kafkaConsumer.subscribe(Arrays.asList("test"));
 
     }
 
