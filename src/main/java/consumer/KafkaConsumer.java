@@ -17,11 +17,14 @@ import java.util.*;
 public class KafkaConsumer<V> {
     private final Logger logger = Logger.getLogger(KafkaConsumer.class);
     public static Properties properties;
+    private final SubscribeState subscribeState;
     private ChannelFuture channelFuture;
     private final String group_id;
     private final String session_id;
 
     public KafkaConsumer(Properties properties) throws Exception {
+        subscribeState = new SubscribeState();
+
         KafkaConsumer.properties = properties;
 
         session_id = ("consumer-" + DataUtil.createTimestamp()).trim();
@@ -53,4 +56,20 @@ public class KafkaConsumer<V> {
 
     }
 
+    public void subscribe(Collection<String> topics)  {
+        if (topics == null) {
+            throw new NullPointerException("topics Collections is null ");
+        }
+
+        if (topics.isEmpty()) {
+            this.unSubscribe();
+        } else {
+
+            subscribeState.setSubscription(new HashSet<>(topics));
+        }
+    }
+
+    private void unSubscribe() {
+
+    }
 }
