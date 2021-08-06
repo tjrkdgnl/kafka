@@ -3,6 +3,7 @@ package brokerServer;
 
 import io.netty.channel.ChannelHandlerContext;
 import model.AckData;
+import model.ProducerRecord;
 import model.Topic;
 import model.Topics;
 import model.response.ResponseTopicMetadata;
@@ -82,7 +83,7 @@ public class TopicMetadataHandler extends AvroSerializers {
         });
     }
 
-    public void createTopic(ChannelHandlerContext ctx, String topic,String request_id) throws Exception {
+    public void createTopic(ChannelHandlerContext ctx, ProducerRecord record) throws Exception {
 
         String autoCreateTopic = properties.getProperty(BrokerConfig.AUTO_CREATE_TOPIC.getValue());
         int partitions = Integer.parseInt(properties.getProperty(BrokerConfig.TOPIC_PARTITIONS.getValue()));
@@ -91,7 +92,7 @@ public class TopicMetadataHandler extends AvroSerializers {
         Schema schema = ReflectData.get().getSchema(Topics.class);
 
         if (autoCreateTopic.equals("false")) {
-            ctx.channel().writeAndFlush(new AckData(500, "\"" + topic + "\"" + "은 broker에 존재하지 않습니다."));
+            ctx.channel().writeAndFlush(new AckData(500, "\"" + record.getTopic() + "\"" + "은 broker에 존재하지 않습니다."));
             return;
         }
 
@@ -111,7 +112,7 @@ public class TopicMetadataHandler extends AvroSerializers {
             logger.info(TOPIC_LIST + " file 생성 완료");
         }
 
-        Topic newTopicMetadata = new Topic(topic, partitions, "0", 0);
+        Topic newTopicMetadata = new Topic(record.getTopic(), partitions, "0", 0);
 
         BrokerServer.topics.getTopicList().add(newTopicMetadata);
 
@@ -133,7 +134,7 @@ public class TopicMetadataHandler extends AvroSerializers {
                     return;
                 }
                 logger.info("성공적으로 토픽을 생성했습니다.");
-                ctx.channel().writeAndFlush(new ResponseTopicMetadata(request_id,newTopicMetadata));
+                ctx.channel().writeAndFlush(new ResponseTopicMetadata(record,newTopicMetadata));
             }
 
             @Override

@@ -1,25 +1,20 @@
 package model.request;
 
+import model.ProducerRecord;
+
 import java.io.Serializable;
 
 public class RequestTopicMetaData implements Serializable {
 
-    private final String request_id;
-    private final String topic;
+    private ProducerRecord record;
 
-
-    public RequestTopicMetaData(String request_id, String topic) {
-        this.request_id = request_id;
-        this.topic = topic;
+    public RequestTopicMetaData(ProducerRecord record){
+        this.record = record;
     }
 
 
-    public String getRequest_id() {
-        return request_id;
-    }
-
-    public String getTopic() {
-        return topic;
+    public ProducerRecord producerRecord(){
+        return record;
     }
 
 }

@@ -4,17 +4,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import model.AckData;
-import model.Topic;
 import model.response.ResponseTopicMetadata;
 import org.apache.log4j.Logger;
 import util.DataUtil;
 import util.ERROR;
 
-import java.util.concurrent.CompletableFuture;
-
 
 public class ProducerInBoundHandler extends ChannelInboundHandlerAdapter {
     private final Logger logger = Logger.getLogger(ProducerInBoundHandler.class);
+
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -26,12 +24,7 @@ public class ProducerInBoundHandler extends ChannelInboundHandlerAdapter {
                 logger.info("프로듀서가 브로커로부터 TopicMetaData를 받았습니다.");
                 ResponseTopicMetadata responseTopicData = (ResponseTopicMetadata) obj;
 
-                String request_id = responseTopicData.getRequest_id();
-
-                CompletableFuture<Topic> completableFuture = KafkaProducer.topicMap.get(request_id);
-
-                //prodcuer client에게 topic 전달
-                completableFuture.complete(responseTopicData.getTopicMetadata());
+                KafkaProducer.sender.send(ctx,responseTopicData.getProducerRecord(),responseTopicData.getTopicMetadata());
 
             } else if (obj instanceof AckData) {
                 AckData ack = (AckData) obj;

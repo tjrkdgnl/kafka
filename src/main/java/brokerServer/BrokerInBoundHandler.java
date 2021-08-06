@@ -31,14 +31,15 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
 
                 //토픽 데이터를 읽어온 후 클라이언트에게 전송한다
                 for (Topic topic : BrokerServer.topics.getTopicList()) {
-                    if (topic.getTopic().equals(requestTopicMetaData.getTopic())) {
-                        ctx.channel().writeAndFlush(new ResponseTopicMetadata(requestTopicMetaData.getRequest_id(), topic));
+                    if (topic.getTopic().equals(requestTopicMetaData.producerRecord().getTopic())) {
+                        ctx.channel().writeAndFlush(new ResponseTopicMetadata(requestTopicMetaData.producerRecord(), topic));
                         return;
                     }
                 }
 
                 //토픽이 존재하지 않으면 토픽을 생성한다
-                BrokerServer.topicMetadataHandler.createTopic(ctx, requestTopicMetaData.getTopic(), requestTopicMetaData.getRequest_id());
+                BrokerServer.topicMetadataHandler.createTopic(ctx,requestTopicMetaData.producerRecord());
+
 
             } else if (obj instanceof ProducerRecord) {
                 logger.info("브로커가 프로듀서로부터 Record를 받았습니다.");
@@ -46,15 +47,17 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
                 ProducerRecord record = (ProducerRecord) obj;
 
                 //record를 작성한 후 client에게 전송한다
+
                 producerRecordHandler.init(ctx, record).saveProducerRecord();
 
-            } else {
+            }  else {
                 ctx.channel().writeAndFlush(new AckData(400, ERROR.TYPE_ERROR +
                         ": 브로커에서 알 수 없는 type의 object를 받았습니다."));
             }
 
         } catch (Exception e) {
             logger.error("client로부터 받은 msg object를 parsing 하던 중, 문제가 발생했습니다.", e);
+
             ctx.channel().writeAndFlush(new AckData(500, "브로커에서 요청받은 object를 parsing 하던 중, 문제가 발생했습니다."));
         }
 
