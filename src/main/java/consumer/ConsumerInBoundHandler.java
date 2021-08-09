@@ -3,6 +3,7 @@ package consumer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import model.request.UpdateConsumerGroup;
 import model.response.ResponseError;
 import model.response.ResponseGroupInfo;
 import org.apache.log4j.Logger;
@@ -17,12 +18,20 @@ public class ConsumerInBoundHandler extends ChannelInboundHandlerAdapter {
         try {
             Object obj = DataUtil.parsingBufToObject((ByteBuf) msg);
 
+
             if(obj instanceof ResponseGroupInfo){
                 ResponseGroupInfo consumerGroupInfo = (ResponseGroupInfo)obj;
 
                 logger.info("consumer group-> "+consumerGroupInfo);
 
-                ConsumerCoordinator.groupCompletableFuture.complete(consumerGroupInfo);
+                Fetcher.groupFuture.complete(consumerGroupInfo.getConsumerGroup());
+
+
+            } else if(obj instanceof UpdateConsumerGroup){
+                //Broker에게서 consumer Group을 업데이트하라는 메세지를 받는다
+
+                //consumer group에 join 완료
+                ConsumerCoordinator.joinGroupFuture.complete(true);
 
             }
             else if(obj instanceof ResponseError){
@@ -31,13 +40,19 @@ public class ConsumerInBoundHandler extends ChannelInboundHandlerAdapter {
                 if(error.getStatus() ==500){
                     logger.info(error.getMessage());
                 }
-                ConsumerCoordinator.groupCompletableFuture.complete(null);
+                Fetcher.groupFuture.complete(null);
+                ConsumerCoordinator.joinGroupFuture.complete(null);
             }
             else{
-                logger.error(ERROR.UNKNOWN_ERROR);
+                logger.info(ERROR.UNKNOWN_STATUS_ERROR);
+                Fetcher.groupFuture.complete(null);
+                ConsumerCoordinator.joinGroupFuture.complete(null);
             }
+
         } catch (Exception e){
             logger.error("broker로부터 받은 msg object를 parsing하던 중 문제가 발생했습니다.", e);
+            Fetcher.groupFuture.complete(null);
+            ConsumerCoordinator.joinGroupFuture.complete(null);
         }
     }
 

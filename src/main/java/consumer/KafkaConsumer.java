@@ -25,6 +25,7 @@ public class KafkaConsumer {
     private final ConsumerCoordinator consumerCoordinator;
     private final String group_id;
     private final String consumer_id;
+    private final Fetcher fetcher;
 
     public KafkaConsumer(Properties properties) throws Exception {
         subscribeState = new SubscribeState();
@@ -33,6 +34,7 @@ public class KafkaConsumer {
         KafkaConsumer.properties = properties;
         group_id = properties.getProperty(ConsumerConfig.GROUP_ID.name());
         consumer_id = ("Consumer-" + DataUtil.createTimestamp()).trim();
+        fetcher = new Fetcher(metadata);
 
         start();
     }
@@ -80,25 +82,33 @@ public class KafkaConsumer {
 
     //추후에 ConsumerRecords 리턴하도록 구현하기
     public void poll() {
-        CompletableFuture<Boolean> resultFuture = new CompletableFuture<>();
+        CompletableFuture<Boolean> joinFuture = new CompletableFuture<>();
+        CompletableFuture<Boolean> updateFuture = new CompletableFuture<>();
 
         try {
             //polling 전, ownership 요청. ownership이 mapping 되기 전까지 대기
-            this.consumerCoordinator.requestJoinGroup(resultFuture, channelFuture, group_id, consumer_id);
+            this.consumerCoordinator.requestJoinGroup(joinFuture, channelFuture, group_id, consumer_id);
 
-            boolean isPossible = resultFuture.get();
+            boolean isJoin = joinFuture.get();
 
-            if(isPossible){
-                //polling 시작
-                logger.info("Polling start");
+            if (isJoin) {
+                this.fetcher.updateConsumerGroup(updateFuture, channelFuture, group_id);
+
+                boolean isUpdate = updateFuture.get();
+
+                if (isUpdate) {
+                    //consumer Group 업데이트가 끝났다면 polling 시작
+                    logger.info("Polling Start");
+                } else {
+                    logger.info("consumer group을 업데이트하지 못했습니다.");
+                }
+
+            } else {
+                logger.info("consumerGroup에 가입하지 못했습니다. ");
             }
-            else{
-                logger.error("메세지를 polling하기 전 문제가 발생했습니다. ");
-            }
-
 
         } catch (Exception e) {
-            logger.error("group join 중 문제가 발생했습니다.", e);
+            logger.error("message 가져오는데 문제가 발생했습니다.", e);
         }
     }
 }

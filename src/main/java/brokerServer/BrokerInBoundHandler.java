@@ -6,6 +6,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import model.AckData;
 import model.ProducerRecord;
 import model.Topic;
+import model.request.RequestConsumerGroup;
 import model.request.RequestJoinGroup;
 import model.request.RequestTopicMetaData;
 import model.response.ResponseTopicMetadata;
@@ -43,23 +44,21 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
 
             } else if (obj instanceof ProducerRecord) {
                 logger.info("브로커가 프로듀서로부터 Record를 받았습니다.");
-
                 ProducerRecord record = (ProducerRecord) obj;
-
                 //record를 작성한 후 client에게 전송한다
                 producerRecordHandler.init(ctx, record).saveProducerRecord();
 
             } else if (obj instanceof RequestJoinGroup) {
                 RequestJoinGroup requestJoinGroup = (RequestJoinGroup) obj;
-
-                //Consumer가 group에 참여
                 BrokerServer.consumerOwnershipHandler.init(ctx, requestJoinGroup).joinConsumerGroup();
 
+            } else if (obj instanceof RequestConsumerGroup) {
+                RequestConsumerGroup consumerGroup = (RequestConsumerGroup) obj;
+                BrokerServer.consumerOwnershipHandler.init(ctx, null).getConsumerGroup(consumerGroup.getGroup_id());
             } else {
                 ctx.channel().writeAndFlush(new AckData(400, ERROR.TYPE_ERROR +
                         ": 브로커에서 알 수 없는 type의 object를 받았습니다."));
             }
-
         } catch (Exception e) {
             logger.error("client로부터 받은 msg object를 parsing 하던 중, 문제가 발생했습니다.", e);
 

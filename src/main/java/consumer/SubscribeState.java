@@ -1,9 +1,8 @@
 package consumer;
 
 import model.TopicPartition;
-import java.util.ArrayList;
+
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public class SubscribeState {
@@ -25,22 +24,8 @@ public class SubscribeState {
         subscriptions.addAll(topics);
     }
 
-    public List<TopicPartition> getSubscriptions(){
-        ArrayList<TopicPartition> topicPartitionArrayList =new ArrayList<>();
-
-        if(assignedTopicWithPartition.size() != 0){
-            topicPartitionArrayList.addAll(assignedTopicWithPartition);
-        }
-
-        for(String topic : subscriptions){
-            TopicPartition topicPartition =new TopicPartition(topic,-1);
-
-            if(!topicPartitionArrayList.contains(topicPartition)){
-                topicPartitionArrayList.add(topicPartition);
-            }
-        }
-
-        return topicPartitionArrayList;
+    public String[] getSubscriptions(){
+        return subscriptions.toArray(new String[subscriptions.size()-1]);
     }
 
 }

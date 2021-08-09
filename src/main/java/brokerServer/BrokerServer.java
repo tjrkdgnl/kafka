@@ -5,9 +5,12 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import manager.NetworkManager;
 import model.Topics;
+import model.request.RequestJoinGroup;
 import org.apache.log4j.Logger;
 
 import java.util.Properties;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class BrokerServer {
     private final Logger logger = Logger.getLogger(BrokerServer.class);
@@ -16,6 +19,7 @@ public class BrokerServer {
     public static Properties properties;
     public static TopicMetadataHandler topicMetadataHandler;
     public static ConsumerOwnershipHandler consumerOwnershipHandler;
+    public static BlockingQueue<RequestJoinGroup> joinGroupQueue;
     public static Topics topics;
 
     public BrokerServer(Properties brokerProperties) throws Exception {
@@ -25,6 +29,8 @@ public class BrokerServer {
         this.port = Integer.parseInt(properties.getProperty(BrokerConfig.PORT.getValue()));
         topicMetadataHandler = new TopicMetadataHandler(properties);
         consumerOwnershipHandler = new ConsumerOwnershipHandler(properties);
+
+        joinGroupQueue = new LinkedBlockingQueue<>();
 
         //broker server가 실행되면 topic list 정보를 얻어온다
         topicMetadataHandler.getTopicMetaData();

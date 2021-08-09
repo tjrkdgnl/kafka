@@ -1,24 +1,22 @@
 package model.request;
 
-import model.TopicPartition;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.io.Serializable;
-import java.util.List;
 
 public class RequestJoinGroup implements Serializable {
 
     private final String group_id;
     private final String consumer_id;
-    private final List<TopicPartition> topics;
+    private final String[] topics;
 
-    public RequestJoinGroup(String consumerGroup, String consumer_id , List<TopicPartition> subscriptions){
+    public RequestJoinGroup(String consumerGroup, String consumer_id , String[] subscriptions){
         this.group_id = consumerGroup;
         this.consumer_id = consumer_id;
         this.topics =subscriptions;
     }
 
-    public List<TopicPartition> getTopics() {
+    public String[] getTopics() {
         return topics;
     }
 
