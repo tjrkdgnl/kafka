@@ -1,21 +1,19 @@
 package model.response;
 
 import model.ConsumerGroup;
-import model.StatusHeader;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import util.GroupStatus;
 
 import java.io.Serializable;
 
-public class ResponseGroupInfo  implements Serializable {
+public class UpdateGroupInfo implements Serializable {
     private ConsumerGroup consumerGroup;
 
-    public ResponseGroupInfo() {
+    public UpdateGroupInfo() {
 
     }
 
-    public ResponseGroupInfo( ConsumerGroup consumerGroup) {
+    public UpdateGroupInfo(ConsumerGroup consumerGroup) {
 
         this.consumerGroup = consumerGroup;
     }

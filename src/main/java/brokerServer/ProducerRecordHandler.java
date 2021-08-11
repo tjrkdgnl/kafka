@@ -40,10 +40,12 @@ public class ProducerRecordHandler {
     private final Schema offsetSchema;
     private final Schema recordsSchema;
     private final AvroSerializers avroSerializers;
+    private final Properties properties;
 
     public ProducerRecordHandler(Properties properties) {
         int ioThread = Integer.parseInt(properties.getProperty(BrokerConfig.IO_THREAD.getValue()));
 
+        this.properties =properties;
         executorService = Executors.newFixedThreadPool(ioThread);
         offsetFuture = new CompletableFuture<>();
         recordsFuture = new CompletableFuture<>();
@@ -54,11 +56,11 @@ public class ProducerRecordHandler {
 
     public ProducerRecordHandler init(ChannelHandlerContext ctx, ProducerRecord producerRecord) {
         this.ctx = ctx;
-        this.maxSegmentSize = Integer.parseInt(BrokerServer.properties.getProperty(BrokerConfig.SEGMENT_BYTES.getValue()));
+        this.maxSegmentSize = Integer.parseInt(properties.getProperty(BrokerConfig.SEGMENT_BYTES.getValue()));
         this.producerRecord = producerRecord;
 
-        String brokerID = BrokerServer.properties.getProperty(BrokerConfig.ID.getValue());
-        Path defaultPath = Path.of(BrokerServer.properties.getProperty(BrokerConfig.LOG_DIRS.getValue()));
+        String brokerID = properties.getProperty(BrokerConfig.ID.getValue());
+        Path defaultPath = Path.of(properties.getProperty(BrokerConfig.LOG_DIRS.getValue()));
 
         topicPath = Path.of(defaultPath + "/" + "broker-" + brokerID + "/" + producerRecord.getTopic() + "/" + "partition" + producerRecord.getPartition());
         defaultLogPath = Path.of(topicPath + "/" + LOG + "_");

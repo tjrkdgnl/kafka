@@ -1,7 +1,7 @@
 package util;
 
-public enum GroupStatus {
+public enum ConsumerRequestStatus {
 
-    UPDATE,JOIN,MESSAGE,REBALANCE
+    JOIN,MESSAGE
 
 }

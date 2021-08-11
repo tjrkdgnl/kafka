@@ -4,19 +4,23 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import model.AckData;
+import model.ConsumerGroup;
 import model.ProducerRecord;
 import model.Topic;
-import model.request.RequestConsumerGroup;
-import model.request.RequestJoinGroup;
+import model.request.RequestPollingMessage;
 import model.request.RequestTopicMetaData;
 import model.response.ResponseTopicMetadata;
 import org.apache.log4j.Logger;
 import util.DataUtil;
 import util.ERROR;
 
+import java.util.concurrent.TimeUnit;
+
 public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
     private final Logger logger = Logger.getLogger(BrokerInBoundHandler.class);
-    private final ProducerRecordHandler producerRecordHandler = new ProducerRecordHandler(BrokerServer.properties);
+    private final ProducerRecordHandler producerRecordHandler = new ProducerRecordHandler(BrokerServer.getProperties());
+    private final ConsumerGroupHandler consumerGroupHandler = new ConsumerGroupHandler(BrokerServer.getProperties());
+    private final GroupRebalanceHandler groupRebalanceHandler = new GroupRebalanceHandler();
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -40,7 +44,7 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
                 }
 
                 //토픽이 존재하지 않으면 토픽을 생성한다
-                BrokerServer.topicMetadataHandler.createTopic(ctx, requestTopicMetaData.producerRecord());
+                BrokerServer.getTopicMetadataHandler().createTopic(ctx, requestTopicMetaData.producerRecord());
 
             } else if (obj instanceof ProducerRecord) {
                 logger.info("브로커가 프로듀서로부터 Record를 받았습니다.");
@@ -48,13 +52,19 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
                 //record를 작성한 후 client에게 전송한다
                 producerRecordHandler.init(ctx, record).saveProducerRecord();
 
-            } else if (obj instanceof RequestJoinGroup) {
-                RequestJoinGroup requestJoinGroup = (RequestJoinGroup) obj;
-                BrokerServer.consumerOwnershipHandler.init(ctx, requestJoinGroup).joinConsumerGroup();
+            } else if (obj instanceof RequestPollingMessage) {
+                RequestPollingMessage pollingMessage = (RequestPollingMessage) obj;
 
-            } else if (obj instanceof RequestConsumerGroup) {
-                RequestConsumerGroup consumerGroup = (RequestConsumerGroup) obj;
-                BrokerServer.consumerOwnershipHandler.init(ctx, null).getConsumerGroup(consumerGroup.getGroup_id());
+                switch (pollingMessage.getStatus()) {
+                    case JOIN:
+                        consumerGroupHandler.init(ctx, pollingMessage).joinConsumerGroup();
+
+                        break;
+
+                    case MESSAGE:
+                        consumerGroupHandler.init(ctx, pollingMessage).checkConsumerGroup();
+                        break;
+                }
             } else {
                 ctx.channel().writeAndFlush(new AckData(400, ERROR.TYPE_ERROR +
                         ": 브로커에서 알 수 없는 type의 object를 받았습니다."));

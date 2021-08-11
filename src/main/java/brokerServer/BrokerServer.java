@@ -5,21 +5,15 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import manager.NetworkManager;
 import model.Topics;
-import model.request.RequestJoinGroup;
 import org.apache.log4j.Logger;
 
 import java.util.Properties;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class BrokerServer {
     private final Logger logger = Logger.getLogger(BrokerServer.class);
     private final String host;
     private final int port;
-    public static Properties properties;
-    public static TopicMetadataHandler topicMetadataHandler;
-    public static ConsumerOwnershipHandler consumerOwnershipHandler;
-    public static BlockingQueue<RequestJoinGroup> joinGroupQueue;
+    private static Properties properties;
     public static Topics topics;
 
     public BrokerServer(Properties brokerProperties) throws Exception {
@@ -27,13 +21,9 @@ public class BrokerServer {
 
         this.host = properties.getProperty(BrokerConfig.HOST.getValue());
         this.port = Integer.parseInt(properties.getProperty(BrokerConfig.PORT.getValue()));
-        topicMetadataHandler = new TopicMetadataHandler(properties);
-        consumerOwnershipHandler = new ConsumerOwnershipHandler(properties);
-
-        joinGroupQueue = new LinkedBlockingQueue<>();
 
         //broker server가 실행되면 topic list 정보를 얻어온다
-        topicMetadataHandler.getTopicMetaData();
+        BrokerRepository.TOPIC_METADATA_HANDLER.getTopicMetaData();
     }
 
     public void start() throws Exception {
@@ -43,12 +33,26 @@ public class BrokerServer {
 
         try {
             ServerBootstrap bootstrap = NetworkManager.getInstance().buildServer(eventLoopGroup, workerEventLoopGroup, host, port);
-
             bootstrap.bind().sync();
 
         } catch (Exception e) {
             logger.error("broker server를 실행하던 중 문제가 발생했습니다.", e);
+            System.exit(-1);
         }
     }
+
+    public static TopicMetadataHandler getTopicMetadataHandler() {
+        return BrokerRepository.TOPIC_METADATA_HANDLER;
+    }
+
+    public static Properties getProperties(){
+        return BrokerRepository.PROPERTIES;
+    }
+
+    private static class BrokerRepository {
+        private static final Properties PROPERTIES = BrokerServer.properties;
+        private static final TopicMetadataHandler TOPIC_METADATA_HANDLER = new TopicMetadataHandler(PROPERTIES);
+    }
+
 
 }

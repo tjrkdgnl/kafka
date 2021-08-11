@@ -1,15 +1,21 @@
 package model;
 
-import util.GroupStatus;
+import util.ConsumerRequestStatus;
 
-public class StatusHeader {
-    private GroupStatus status;
+import java.io.Serializable;
 
-    public StatusHeader(GroupStatus status){
+public class StatusHeader implements Serializable {
+    private ConsumerRequestStatus status;
+
+    public StatusHeader(){
+
+    }
+
+    public StatusHeader(ConsumerRequestStatus status){
         this.status =status;
     }
 
-    public GroupStatus getStatus() {
+    public ConsumerRequestStatus getStatus() {
         return status;
     }
 }

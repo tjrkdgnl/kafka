@@ -6,7 +6,6 @@ import model.TopicPartition;
 import model.Topics;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -37,7 +36,7 @@ public class GroupRebalanceHandler {
                         List<String> consumerList = consumerGroup.getTopicMap().get(subscribedTopic);
 
                         //모든 partition의 ownership을 초기화 한다
-                        consumerGroup.setOwnershipMap(new HashMap<>());
+                        consumerGroup.initOwnership();
 
                         //토픽의 partition을 consumer들에게 분배한다
                         for (int partition = 0; partition < topic.getPartitions(); partition++) {
@@ -49,7 +48,7 @@ public class GroupRebalanceHandler {
                             topicPartitions.add(topicPartition);
 
                             //consumer와 토픽의 파티션을 맵핑하고 저장한다
-                            consumerGroup.getOwnershipMap().put(consumerList.get(consumerIdx++), topicPartitions);
+                            consumerGroup.addOwnership(consumerList.get(consumerIdx++), topicPartitions);
 
                             //첫 consumer부터 다시 topic의 파티션을 할당하기 위해 index를 초기화 한다
                             if (consumerIdx >= consumerList.size()) {

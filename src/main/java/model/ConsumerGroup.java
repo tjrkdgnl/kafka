@@ -8,41 +8,56 @@ import java.util.HashMap;
 import java.util.List;
 
 public class ConsumerGroup implements Serializable {
-    private String group_id;
+    private String groupId;
+    private int rebalanceId;
 
-    //member가 갖고 있는 topic의 정보
+
+    //member가 갖고 있는 topic list
     private HashMap<String, List<TopicPartition>> ownershipMap;
 
-    private HashMap<String,List<String>> topicMap;
+    //topic을 구독하고 있는 consumer list
+    private final HashMap<String, List<String>> topicMap;
 
-    public ConsumerGroup(){
+    public ConsumerGroup() {
         ownershipMap = new HashMap<>();
         topicMap = new HashMap<>();
+        rebalanceId = 0;
     }
 
-    public ConsumerGroup(String group_id, HashMap<String,List<TopicPartition>> memberTopicPartitions){
-        this.group_id =group_id;
-        this.ownershipMap =memberTopicPartitions;
+    public String getGroupId() {
+        return groupId;
     }
 
-    public void setGroup_id(String group_id) {
-        this.group_id = group_id;
+    public void setGroupId(String groupId) {
+        this.groupId = groupId;
     }
 
-    public String getGroup_id() {
-        return group_id;
+    public int getRebalanceId() {
+        return rebalanceId;
+    }
+
+    public void setRebalanceId(int rebalanceId) {
+        this.rebalanceId = rebalanceId;
+    }
+
+    public void setConsumerList(String topic, List<String> consumerList){
+        this.topicMap.put(topic,consumerList);
     }
 
     public HashMap<String, List<String>> getTopicMap() {
-        return topicMap;
+        return new HashMap<>(topicMap);
     }
 
-    public void setOwnershipMap(HashMap<String, List<TopicPartition>> ownershipMap) {
-        this.ownershipMap = ownershipMap;
+    public void initOwnership() {
+        this.ownershipMap = new HashMap<>();
+    }
+
+    public void addOwnership(String consumer,List<TopicPartition> topicPartitions){
+        ownershipMap.put(consumer,topicPartitions);
     }
 
     public HashMap<String, List<TopicPartition>> getOwnershipMap() {
-        return ownershipMap;
+        return new HashMap<>(ownershipMap);
     }
 
     @Override

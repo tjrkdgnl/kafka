@@ -1,7 +1,8 @@
 package consumer;
 
 public enum ConsumerConfig {
-    SERVER("server_address"),GROUP_ID("group_id"),PORT("port");
+    SERVER("serverAddress"),GROUP_ID("groupId"),PORT("port"),
+    CONSUMER_ID("consumerId");
 
 
     private final String value;
