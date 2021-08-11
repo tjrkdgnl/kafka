@@ -2,14 +2,15 @@ package brokerServer;
 
 import io.netty.channel.ChannelHandlerContext;
 import model.ConsumerGroup;
-import model.request.RequestJoinGroup;
-import model.request.UpdateConsumerGroup;
+import model.ConsumerGroups;
+import model.request.RequestPollingMessage;
 import model.response.ResponseError;
-import model.response.ResponseGroupInfo;
+import model.response.UpdateGroupInfo;
 import org.apache.avro.Schema;
 import org.apache.avro.reflect.ReflectData;
 import org.apache.log4j.Logger;
 import util.AvroSerializers;
+import util.GroupStatus;
 
 import java.io.EOFException;
 import java.io.File;
@@ -20,52 +21,56 @@ import java.nio.channels.CompletionHandler;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class ConsumerOwnershipHandler {
+public class ConsumerMessageHandler {
     private final Logger logger;
     private final AvroSerializers avroSerializers;
     private ChannelHandlerContext ctx;
     private final Path defaultPath;
     private Path groupPath;
-    private RequestJoinGroup requestConsumerGroup;
+    private RequestPollingMessage consumerMessage;
     private final ExecutorService executorService;
     private final Schema consumerGroupsSchema;
-    private CompletableFuture<ConsumerGroup> groupsCompletableFuture;
+    private final HashMap<String, CompletableFuture<ConsumerGroups>> groupMap;
     private final GroupRebalanceHandler groupRebalanceHandler;
+    private final ExecutorService sequentialExecutor;
+    private final HashMap<String, GroupStatus> groupStatusHashMap;
 
-    public ConsumerOwnershipHandler(Properties properties) {
-        this.logger = Logger.getLogger(ConsumerOwnershipHandler.class);
+    public ConsumerMessageHandler(Properties properties) {
+        this.logger = Logger.getLogger(ConsumerMessageHandler.class);
         this.avroSerializers = new AvroSerializers();
         this.defaultPath = Path.of(properties.getProperty(BrokerConfig.LOG_DIRS.getValue()));
 
         int ioThread = Integer.parseInt(properties.getProperty(BrokerConfig.IO_THREAD.getValue()));
         executorService = Executors.newFixedThreadPool(ioThread);
-
-        consumerGroupsSchema = ReflectData.get().getSchema(ConsumerGroup.class);
-
+        sequentialExecutor = Executors.newSingleThreadExecutor();
+        consumerGroupsSchema = ReflectData.get().getSchema(ConsumerGroups.class);
         groupRebalanceHandler = new GroupRebalanceHandler();
+
+        groupMap = new HashMap<>();
+        groupStatusHashMap =new HashMap<>();
     }
 
 
-    public ConsumerOwnershipHandler init(ChannelHandlerContext ctx, RequestJoinGroup joinConsumerGroup) {
+    public ConsumerMessageHandler init(ChannelHandlerContext ctx, RequestPollingMessage message) {
         this.ctx = ctx;
-        this.requestConsumerGroup = joinConsumerGroup;
-
+        this.consumerMessage = message;
         return this;
     }
 
+    public void joinConsumerGroup(){
+        groupStatusHashMap.put(consumerMessage.getGroupId(),GroupStatus.JOIN);
+    }
 
-    public void joinConsumerGroup() {
-        CompletableFuture.supplyAsync(() -> {
+
+    public void checkMessage() {
+        sequentialExecutor.submit(() -> {
             try {
-                groupPath = Path.of(defaultPath.toString() + "/" + requestConsumerGroup.getGroup_id());
+                groupPath = Path.of(defaultPath.toString() + "/" + consumerMessage.getGroupId());
                 logger.info(groupPath);
 
                 if (!Files.exists(groupPath)) {
@@ -73,47 +78,32 @@ public class ConsumerOwnershipHandler {
                     logger.info("Consumer Group 파일 생성 완료");
                 }
 
-                groupsCompletableFuture = new CompletableFuture<>();
+                CompletableFuture<ConsumerGroups> groupFuture = new CompletableFuture<>();
+                groupMap.put(consumerMessage.getConsumerId(), groupFuture);
 
                 readGroupMetadata();
 
-                return groupsCompletableFuture.get();
             } catch (Exception e) {
                 logger.error("consumerGroup file을 읽던 중 문제가 발생했습니다", e);
                 ctx.channel().writeAndFlush(new ResponseError(500, "consumer group file을 읽던 중 문제가 발생했습니다"));
             }
-            return null;
-        }).thenAcceptAsync(consumerGroup -> {
+        });
+
+        sequentialExecutor.submit(() -> {
             try {
-                writeGroupMetadata(consumerGroup);
+                CompletableFuture<ConsumerGroups> future = groupMap.get(consumerMessage.getConsumerId());
+                ConsumerGroups consumerGroup = future.get();
+
+                if(consumerGroup != null){
+                    writeGroupMetadata(consumerGroup);
+                }
+
             } catch (Exception e) {
                 logger.error("consumerGroup file을 작성하던 중 문제가 발생했습니다", e);
                 ctx.channel().writeAndFlush(new ResponseError(500, "consumer group file을 작성하던 중 문제가 발생했습니다"));
             }
         });
     }
-
-    public void getConsumerGroup(String group_id){
-        CompletableFuture.runAsync(()->{
-            try {
-                groupPath = Path.of(defaultPath.toString() + "/" + group_id);
-
-                groupsCompletableFuture = new CompletableFuture<>();
-
-                readGroupMetadata();
-
-                ConsumerGroup consumerGroup = groupsCompletableFuture.get();
-
-                ctx.channel().writeAndFlush(new ResponseGroupInfo(consumerGroup));
-
-            }
-            catch (Exception e){
-                logger.error("Consumer group file을 읽던 중 문제가 발생했습니다",e);
-                ctx.channel().writeAndFlush(new ResponseError(500,"Consumer group file을 읽던 중 문제가 발생했습니다"));
-            }
-        });
-    }
-
 
     public void readGroupMetadata() throws Exception {
         //최근에 작성한 consumer group file 불러오기
@@ -123,11 +113,11 @@ public class ConsumerOwnershipHandler {
         readAsyncFileChannel(file);
     }
 
-    public void writeGroupMetadata(ConsumerGroup consumerGroup) throws Exception {
+    public void writeGroupMetadata(ConsumerGroups consumerGroups) throws Exception {
         //최근에 작성한 consumer file 불러오기
         File file = new File(groupPath.toString());
 
-        writeAsyncFileChannel(file, consumerGroupsSchema, consumerGroup);
+        writeAsyncFileChannel(file, consumerGroupsSchema, consumerGroups);
     }
 
 
@@ -144,18 +134,34 @@ public class ConsumerOwnershipHandler {
                     logger.error("파일을 읽어오는데서 문제가 발생했습니다. result =" + result);
                     return;
                 }
-                //파일로부터 읽어들이고 object로 변환하기
+
+                CompletableFuture<ConsumerGroups> groupsCompletableFuture = groupMap.get(consumerMessage.getConsumerId());
+
                 try {
-                    ConsumerGroup consumerGroup = (ConsumerGroup) avroSerializers.getDeserialization(byteBuffer.array(), consumerGroupsSchema);
+                    ConsumerGroups consumerGroups = (ConsumerGroups) avroSerializers.getDeserialization(byteBuffer.array(), consumerGroupsSchema);
 
-                    logger.info("ConsumerGroups을 성공적으로 읽었습니다. ->" + consumerGroup);
+                    ConsumerGroup consumerGroup = consumerGroups.getGroupInfoMap().get(consumerMessage.getGroupId());
 
-                    groupsCompletableFuture.complete(consumerGroup);
+                    logger.info("ConsumerGroup을 성공적으로 읽었습니다. ->" + consumerGroup);
+
+                    if (!consumerGroup.getOwnershipMap().containsKey(consumerMessage.getConsumerId())) {
+                        //컨슈머와 ownership 관계가 있는 토픽이 없다면 rebalance 진행 후 컨슈머에게 consumer 정보 업데이트 요청
+                        groupsCompletableFuture.complete(consumerGroups);
+                    } else if (consumerGroup.getRebalanceId() > consumerMessage.getRebalanceId()) {
+                        //컨슈머에게 group 정보 업데이트 요청 전송.
+                        ctx.channel().writeAndFlush(new UpdateGroupInfo(consumerGroup));
+                        groupsCompletableFuture.complete(null);
+
+                    } else {
+                        //컨슈머가 구독하고 있는 topic에 대한 message를 전송하도록 구현
+                        groupsCompletableFuture.complete(null);
+                    }
 
                 } catch (EOFException e) {
                     logger.info("Consumer Group 파일에 값이 존재하지 않습니다.");
 
-                    groupsCompletableFuture.complete(new ConsumerGroup());
+                    //처음 group에 진입하기 위한 객체 초기화 진행한다 또한 rebalance를 진행하도록 한다
+                    groupsCompletableFuture.complete(new ConsumerGroups());
                     return;
 
                 } catch (Exception e) {
@@ -175,16 +181,18 @@ public class ConsumerOwnershipHandler {
     }
 
 
-    private void writeAsyncFileChannel(File file, Schema schema, ConsumerGroup consumerGroup) throws Exception {
+    private void writeAsyncFileChannel(File file, Schema schema, ConsumerGroups consumerGroups) throws Exception {
 
-        //consumer group을 정의하고 consumer가 구독할 topic들을 저장한다
-        consumerGroup.setGroup_id(requestConsumerGroup.getGroup_id());
+        //저장된 consumerGroup을 가져온다
+        ConsumerGroup consumerGroup = consumerGroups.getGroupInfoMap().getOrDefault(consumerMessage.getGroupId(), new ConsumerGroup());
+        consumerGroup.setGroupId(consumerMessage.getGroupId());
+        consumerGroup.setRebalanceId(consumerGroup.getRebalanceId() + 1);
 
         //topic을 구독하는 consumer 리스트를 생성한다
-        for (String topic : requestConsumerGroup.getTopics()) {
+        for (String topic : consumerMessage.getTopics()) {
             List<String> consumerList = consumerGroup.getTopicMap().getOrDefault(topic, new ArrayList<>());
-            consumerList.add(requestConsumerGroup.getConsumer_id());
-            consumerGroup.getTopicMap().put(topic, consumerList);
+            consumerList.add(consumerMessage.getConsumerId());
+            consumerGroup.setConsumerList(topic, consumerList);
         }
 
         CompletableFuture<Boolean> resultFuture = new CompletableFuture<>();
@@ -195,7 +203,10 @@ public class ConsumerOwnershipHandler {
         boolean isPossible = resultFuture.get();
 
         if (isPossible) {
-            byte[] bytes = avroSerializers.getSerialization(consumerGroup, schema);
+
+            consumerGroups.getGroupInfoMap().put(consumerMessage.getGroupId(), consumerGroup);
+
+            byte[] bytes = avroSerializers.getSerialization(consumerGroups, schema);
 
             ByteBuffer byteBuffer = ByteBuffer.allocate(bytes.length);
             byteBuffer.put(bytes);
@@ -203,7 +214,6 @@ public class ConsumerOwnershipHandler {
             byteBuffer.flip();
 
             AsynchronousFileChannel asynchronousFileChannel = AsynchronousFileChannel.open(file.toPath(), EnumSet.of(StandardOpenOption.WRITE), executorService);
-
 
             asynchronousFileChannel.write(byteBuffer, 0, null, new CompletionHandler<Integer, Object>() {
                 @Override
@@ -215,7 +225,7 @@ public class ConsumerOwnershipHandler {
                     }
 
                     //파일로 저장이 끝났음으로 consumer에게 consumerGroup을 업데이트를 알림
-                    ctx.channel().writeAndFlush(new UpdateConsumerGroup());
+                    ctx.channel().writeAndFlush(new UpdateGroupInfo(consumerGroup));
 
                     logger.info("Consumer group을 성공적으로 작성하였습니다.");
 
