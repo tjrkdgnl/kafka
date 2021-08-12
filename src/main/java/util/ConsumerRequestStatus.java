@@ -2,6 +2,6 @@ package util;
 
 public enum ConsumerRequestStatus {
 
-    JOIN,MESSAGE
+    JOIN,MESSAGE,UPDATE
 
 }

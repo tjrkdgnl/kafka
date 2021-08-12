@@ -2,8 +2,6 @@ package consumer;
 
 import java.util.Arrays;
 import java.util.Properties;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class ConsumerApplication {
 
@@ -20,7 +18,9 @@ public class ConsumerApplication {
 
         kafkaConsumer.subscribe(Arrays.asList("test"));
 
-        kafkaConsumer.poll();
 
+        while(true){
+            kafkaConsumer.poll();
+        }
     }
 }

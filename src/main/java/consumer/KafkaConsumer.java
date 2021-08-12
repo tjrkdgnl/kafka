@@ -7,32 +7,24 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import manager.NetworkManager;
-import model.TopicPartition;
 import org.apache.log4j.Logger;
-import util.ConsumerRequestStatus;
-import util.DataUtil;
 
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Properties;
 
 public class KafkaConsumer {
-    private final Logger logger = Logger.getLogger(KafkaConsumer.class);
-    public static Properties properties;
-    private final SubscribeState subscribeState;
-    public ConsumerMetadata metadata;
-    private final Fetcher fetcher;
-    private ChannelFuture channelFuture;
+    private Logger logger = Logger.getLogger(KafkaConsumer.class);
+    private Properties properties;
 
-    public KafkaConsumer(Properties properties) throws Exception {
-        subscribeState = new SubscribeState();
-        metadata = new ConsumerMetadata();
-        KafkaConsumer.properties = properties;
-        String groupId = properties.getProperty(ConsumerConfig.GROUP_ID.name());
-        String consumerId = properties.getProperty(ConsumerConfig.CONSUMER_ID.name());
-        fetcher = new Fetcher(metadata, subscribeState, groupId, consumerId);
+    public KafkaConsumer(Properties properties) {
 
-        start();
+        try {
+            this.properties = properties;
+            start();
+        } catch (Exception e) {
+           logger.info("server와 연결 중 문제가 발생했습니다.",e);
+           System.exit(-1);
+        }
     }
 
     public void start() throws Exception {
@@ -54,29 +46,21 @@ public class KafkaConsumer {
                     }
                 });
 
-         channelFuture = bootstrap.connect().sync();
-        this.fetcher.setChannelFuture(channelFuture);
+        ChannelFuture channelFuture = bootstrap.connect().sync();
+
+        ConsumerClient.getInstance().init(properties, channelFuture);
 
     }
 
-    public void assign(TopicPartition topicPartition) {
-        this.subscribeState.setAssignedTopicWithPartition(topicPartition);
-    }
-
-    public void subscribe(Collection<String> topics) {
-        if (topics == null) {
-            throw new NullPointerException("Topics Collections is null ");
-        } else {
-            this.subscribeState.setSubscriptions(new HashSet<>(topics));
-        }
+    public void subscribe(Collection<String> topics){
+        ConsumerClient.getInstance().subscribe(topics);
     }
 
 
-    //추후에 ConsumerRecords 리턴하도록 구현하기
-    public void poll() {
-        if (this.fetcher.getStatus() == ConsumerRequestStatus.JOIN) {
-            this.fetcher.joinConsumerGroup();
-        }
-
+    public void poll() throws InterruptedException {
+        //join부터 update까지 테스트를 위한 sleep
+        Thread.sleep(2000);
+        ConsumerClient.getInstance().poll();
     }
+
 }

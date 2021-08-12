@@ -4,7 +4,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import model.AckData;
-import model.ConsumerGroup;
 import model.ProducerRecord;
 import model.Topic;
 import model.request.RequestPollingMessage;
@@ -14,13 +13,12 @@ import org.apache.log4j.Logger;
 import util.DataUtil;
 import util.ERROR;
 
-import java.util.concurrent.TimeUnit;
 
 public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
     private final Logger logger = Logger.getLogger(BrokerInBoundHandler.class);
     private final ProducerRecordHandler producerRecordHandler = new ProducerRecordHandler(BrokerServer.getProperties());
     private final ConsumerGroupHandler consumerGroupHandler = new ConsumerGroupHandler(BrokerServer.getProperties());
-    private final GroupRebalanceHandler groupRebalanceHandler = new GroupRebalanceHandler();
+
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -58,11 +56,13 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
                 switch (pollingMessage.getStatus()) {
                     case JOIN:
                         consumerGroupHandler.init(ctx, pollingMessage).joinConsumerGroup();
-
                         break;
 
-                    case MESSAGE:
+                    case UPDATE:
                         consumerGroupHandler.init(ctx, pollingMessage).checkConsumerGroup();
+
+                    case MESSAGE:
+                        //RecordHandler를 이용해서 consumer에게 record전달
                         break;
                 }
             } else {
