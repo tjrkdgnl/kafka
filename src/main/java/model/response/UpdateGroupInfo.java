@@ -8,20 +8,23 @@ import util.GroupStatus;
 import java.io.Serializable;
 
 public class UpdateGroupInfo implements Serializable {
-    private GroupStatus groupStatus;
+    private final GroupStatus groupStatus;
+    private final String consumerId;
     private ConsumerGroup consumerGroup;
 
-    public UpdateGroupInfo() {
-
+    public UpdateGroupInfo(GroupStatus status, String consumerId) {
+        this.consumerId = consumerId;
+        this.groupStatus = status;
     }
 
-    public UpdateGroupInfo(GroupStatus status){
-        this.groupStatus =status;
-    }
-
-    public UpdateGroupInfo(GroupStatus status,ConsumerGroup consumerGroup) {
-        this.groupStatus =status;
+    public UpdateGroupInfo(GroupStatus status, ConsumerGroup consumerGroup, String consumerId) {
+        this.consumerId = consumerId;
+        this.groupStatus = status;
         this.consumerGroup = consumerGroup;
+    }
+
+    public String getConsumerId() {
+        return consumerId;
     }
 
     public GroupStatus getGroupStatus() {

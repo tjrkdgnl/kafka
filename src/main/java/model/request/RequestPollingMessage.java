@@ -1,7 +1,7 @@
 package model.request;
 
 import model.StatusHeader;
-import util.ConsumerRequestStatus;
+import util.MemberState;
 
 import java.io.Serializable;
 
@@ -11,12 +11,12 @@ public class RequestPollingMessage extends StatusHeader implements Serializable 
     private final String consumerId;
     private final String groupId;
 
-    public RequestPollingMessage(ConsumerRequestStatus status, int rebalanceId, String[] topics, String consumerId, String groupId){
+    public RequestPollingMessage(MemberState status, int rebalanceId, String[] topics, String consumerId, String groupId) {
         super(status);
-        this.rebalanceId =rebalanceId;
-        this.topics =topics;
-        this.consumerId =consumerId;
-        this.groupId =groupId;
+        this.rebalanceId = rebalanceId;
+        this.topics = topics;
+        this.consumerId = consumerId;
+        this.groupId = groupId;
     }
 
     public int getRebalanceId() {

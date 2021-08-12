@@ -3,12 +3,11 @@ package consumer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import model.response.ResponseError;
 import model.response.UpdateGroupInfo;
 import org.apache.log4j.Logger;
-import util.ConsumerRequestStatus;
 import util.DataUtil;
 import util.ERROR;
+import util.MemberState;
 
 
 public class ConsumerInBoundHandler extends ChannelInboundHandlerAdapter {
@@ -22,29 +21,19 @@ public class ConsumerInBoundHandler extends ChannelInboundHandlerAdapter {
             if (obj instanceof UpdateGroupInfo) {
                 UpdateGroupInfo groupInfo = (UpdateGroupInfo) obj;
 
+                ConsumerClient consumer = ConsumerManager.getInstance().getConsumer(groupInfo.getConsumerId());
+
                 switch (groupInfo.getGroupStatus()) {
                     case UPDATE:
-                        ConsumerClient.getInstance().getFetcher().changeStatus(ConsumerRequestStatus.UPDATE);
+                        consumer.getFetcher().changeStatus(MemberState.UPDATE);
                         break;
 
                     case COMPLETE:
-                        ConsumerClient.getInstance().getFetcher().updateConsumerGroup(groupInfo.getConsumerGroup());
-                        ConsumerClient.getInstance().getFetcher().changeStatus(ConsumerRequestStatus.MESSAGE);
+                        consumer.getFetcher().updateConsumerGroup(groupInfo.getConsumerGroup());
                         break;
-
-                    case PREPARE:
-                        //컨슈머 rebalance;
                 }
-
-            } else if (obj instanceof ResponseError) {
-                ResponseError error = (ResponseError) obj;
-
-                if (error.getStatus() == 500) {
-                    logger.info(error.getMessage());
-                }
-
             } else {
-                logger.info(ERROR.UNKNOWN_STATUS_ERROR);
+                logger.error(ERROR.UNKNOWN_ERROR);
             }
 
         } catch (Exception e) {

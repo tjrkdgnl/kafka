@@ -4,20 +4,18 @@ import model.ConsumerGroup;
 import model.Topic;
 import model.TopicPartition;
 import model.Topics;
+import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 
 public class GroupRebalanceHandler {
+    private final Logger logger = Logger.getLogger(GroupRebalanceHandler.class);
+    private RebalanceCallbackListener rebalanceCallbackListener;
 
-    public GroupRebalanceHandler() {
 
-    }
-
-    public void runRebalance(CompletableFuture<Boolean> resultFuture, ConsumerGroup consumerGroup) {
-
+    public void runRebalance(ConsumerGroup consumerGroup) throws Exception {
         try {
             //consumer들이 구독한 토픽들을 가져온다
             Set<String> subscriptionTopics = consumerGroup.getTopicMap().keySet();
@@ -59,10 +57,21 @@ public class GroupRebalanceHandler {
                 }
             }
 
-            resultFuture.complete(true);
+            rebalanceCallbackListener.setResult(true);
 
         } catch (Exception e) {
-            resultFuture.complete(false);
+            logger.error("파티션 분배를 진행 중에 문제가 발생했습니다.", e);
+            rebalanceCallbackListener.setResult(false);
         }
     }
+
+
+    public void setListener(RebalanceCallbackListener rebalanceCallbackListener) {
+        this.rebalanceCallbackListener = rebalanceCallbackListener;
+    }
+
+    public interface RebalanceCallbackListener {
+        void setResult(boolean isPossible) throws Exception;
+    }
+
 }

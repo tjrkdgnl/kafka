@@ -4,13 +4,11 @@ import io.netty.channel.ChannelHandlerContext;
 import model.ConsumerGroup;
 import model.ConsumerGroups;
 import model.request.RequestPollingMessage;
-import model.response.ResponseError;
 import model.response.UpdateGroupInfo;
 import org.apache.avro.Schema;
 import org.apache.avro.reflect.ReflectData;
 import org.apache.log4j.Logger;
 import util.AvroSerializers;
-import util.ConsumerRequestStatus;
 import util.GroupStatus;
 
 import java.io.EOFException;
@@ -26,21 +24,17 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class ConsumerGroupHandler {
     private final Logger logger;
     private final AvroSerializers avroSerializers;
-    private ChannelHandlerContext ctx;
     private final Path defaultPath;
     private Path groupPath;
-    private RequestPollingMessage consumerMessage;
     private final ExecutorService executorService;
     private final Schema consumerGroupsSchema;
     private final GroupRebalanceHandler groupRebalanceHandler;
-    private ConsumerRequestStatus status;
 
     public ConsumerGroupHandler(Properties properties) {
         this.logger = Logger.getLogger(ConsumerGroupHandler.class);
@@ -54,61 +48,43 @@ public class ConsumerGroupHandler {
     }
 
 
-    public ConsumerGroupHandler init(ChannelHandlerContext ctx, RequestPollingMessage message) {
-        this.ctx = ctx;
-        this.status = message.getStatus();
-        this.consumerMessage = message;
-        return this;
-    }
-
-
-    public void checkConsumerGroup() {
+    public void getConsumerGroup(ChannelHandlerContext ctx, RequestPollingMessage message) {
         executorService.submit(() -> {
             try {
-                groupPath = Path.of(defaultPath.toString() + "/" + consumerMessage.getGroupId());
+                groupPath = Path.of(defaultPath.toString() + "/" + message.getGroupId());
                 File file = new File(groupPath.toString());
 
-                readAsyncFileChannel(file);
+                readAsyncFileChannel(file, ctx, message);
 
             } catch (Exception e) {
                 logger.error("컨슈머 그룹을 가져오는데 문제가 발생했습니다.", e);
-                ctx.channel().writeAndFlush(new ResponseError(500, "consumer group file을 읽던 중 문제가 발생했습니다"));
             }
         });
     }
 
 
-    public void joinConsumerGroup() {
+    public void joinConsumerGroup(ChannelHandlerContext ctx, RequestPollingMessage message) {
         executorService.submit(() -> {
             try {
-                groupPath = Path.of(defaultPath.toString() + "/" + consumerMessage.getGroupId());
+                groupPath = Path.of(defaultPath.toString() + "/" + message.getGroupId());
                 logger.info(groupPath);
 
                 if (!Files.exists(groupPath)) {
                     Files.createFile(groupPath);
                     logger.info("Consumer Group 파일 생성 완료");
                 }
+                File file = new File(groupPath.toString());
 
-                readGroupMetadata();
+                readAsyncFileChannel(file, ctx, message);
 
             } catch (Exception e) {
                 logger.error("consumerGroup file을 읽던 중 문제가 발생했습니다", e);
-                ctx.channel().writeAndFlush(new ResponseError(500, "consumer group file을 읽던 중 문제가 발생했습니다"));
             }
         });
     }
 
 
-    public void readGroupMetadata() throws Exception {
-        //최근에 작성한 consumer group file 불러오기
-        File file = new File(groupPath.toString());
-
-        //ConsumerGroup 파일 읽기
-        readAsyncFileChannel(file);
-    }
-
-
-    private void readAsyncFileChannel(File file) throws IOException {
+    private void readAsyncFileChannel(File file, ChannelHandlerContext ctx, RequestPollingMessage message) throws IOException {
 
         AsynchronousFileChannel asynchronousFileChannel = AsynchronousFileChannel.open(file.toPath(), EnumSet.of(StandardOpenOption.READ), executorService);
 
@@ -122,7 +98,11 @@ public class ConsumerGroupHandler {
                     return;
                 }
 
-                processTheResults(file, byteBuffer.array(), status);
+                try {
+                    processTheResults(file, ctx, message, byteBuffer.array());
+                } catch (Exception e) {
+                    logger.error("consumer group 처리 중 문제가 발생했습니다. ", e);
+                }
 
                 closeAsyncChannel(asynchronousFileChannel);
             }
@@ -135,95 +115,90 @@ public class ConsumerGroupHandler {
         });
     }
 
-
-    private void writeAsyncFileChannel(File file, Schema schema, ConsumerGroups consumerGroups) throws Exception {
+    private void executeRebalance(File file, ChannelHandlerContext ctx, RequestPollingMessage message,
+                                  Schema schema, ConsumerGroups consumerGroups) throws Exception {
         //저장된 consumerGroup을 가져온다
-        ConsumerGroup consumerGroup = consumerGroups.getGroupInfoMap().getOrDefault(consumerMessage.getGroupId(), new ConsumerGroup());
-        consumerGroup.setGroupId(consumerMessage.getGroupId());
+        ConsumerGroup consumerGroup = consumerGroups.getGroupInfoMap().getOrDefault(message.getGroupId(), new ConsumerGroup());
+        consumerGroup.setGroupId(message.getGroupId());
         consumerGroup.setRebalanceId(consumerGroup.getRebalanceId() + 1);
 
 
         //topic을 구독하는 consumer 리스트를 생성한다
-        for (String topic : consumerMessage.getTopics()) {
+        for (String topic : message.getTopics()) {
             List<String> consumerList = consumerGroup.getTopicMap().getOrDefault(topic, new ArrayList<>());
-            if (!consumerList.contains(consumerMessage.getConsumerId())) {
-                consumerList.add(consumerMessage.getConsumerId());
+            if (!consumerList.contains(message.getConsumerId())) {
+                consumerList.add(message.getConsumerId());
             }
             consumerGroup.setConsumerList(topic, consumerList);
         }
 
+        consumerGroups.getGroupInfoMap().put(message.getGroupId(), consumerGroup);
 
-        CompletableFuture<Boolean> resultFuture = new CompletableFuture<>();
+        groupRebalanceHandler.setListener(isPossible -> {
+            if (isPossible) {
+                writeAsyncFileChannel(file, ctx, message, schema, consumerGroups);
+            } else {
+                logger.error("리밸런스를 진행하던 중 문제가 발생했습니다.");
+            }
+        });
 
-        groupRebalanceHandler.runRebalance(resultFuture, consumerGroup);
-
-        //rebalance가 끝났음에 대한 결과를 리턴한다
-        boolean isPossible = resultFuture.get();
-
-        if (isPossible) {
-
-            consumerGroups.getGroupInfoMap().put(consumerMessage.getGroupId(), consumerGroup);
-
-            byte[] bytes = avroSerializers.getSerialization(consumerGroups, schema);
-
-            ByteBuffer byteBuffer = ByteBuffer.allocate(bytes.length);
-            byteBuffer.put(bytes);
-
-            byteBuffer.flip();
-
-            AsynchronousFileChannel asynchronousFileChannel = AsynchronousFileChannel.open(file.toPath(), EnumSet.of(StandardOpenOption.WRITE), executorService);
-
-            asynchronousFileChannel.write(byteBuffer, 0, null, new CompletionHandler<Integer, Object>() {
-                @Override
-                public void completed(Integer result, Object attachment) {
-
-                    if (result == -1) {
-                        logger.error("파일을 작성하면서 문제가 발생했습니다.");
-                        return;
-                    }
-
-                    //파일로 저장이 끝났음으로 consumer에게 consumerGroup을 업데이트를 알림
-                    UpdateGroupInfo responseGroupInfo = new UpdateGroupInfo(GroupStatus.UPDATE);
-                    ctx.channel().writeAndFlush(responseGroupInfo);
-
-                    logger.info("Consumer group을 성공적으로 작성하였습니다.");
-
-                    closeAsyncChannel(asynchronousFileChannel);
-                }
-
-                @Override
-                public void failed(Throwable exc, Object attachment) {
-                    logger.error("Consumer group을 write하는데 실패했습니다.", exc);
-                    closeAsyncChannel(asynchronousFileChannel);
-                }
-            });
-        } else {
-            logger.info("rebalance를 진행하던 중 문제가 발생했습니다.");
-            ctx.channel().writeAndFlush(new ResponseError(500, "rebalance를 진행하던 중 문제가 발생했습니다."));
-        }
+        groupRebalanceHandler.runRebalance(consumerGroup);
     }
 
 
-    private void processTheResults(File file, byte[] bytes, ConsumerRequestStatus status) {
-        switch (status) {
-            case JOIN:
+    private void writeAsyncFileChannel(File file, ChannelHandlerContext ctx, RequestPollingMessage message,
+                                       Schema schema, ConsumerGroups consumerGroups) throws Exception {
+
+        byte[] bytes = avroSerializers.getSerialization(consumerGroups, schema);
+
+        ByteBuffer byteBuffer = ByteBuffer.allocate(bytes.length);
+        byteBuffer.put(bytes);
+
+        byteBuffer.flip();
+
+        AsynchronousFileChannel asynchronousFileChannel = AsynchronousFileChannel.open(file.toPath(), EnumSet.of(StandardOpenOption.WRITE), executorService);
+
+        asynchronousFileChannel.write(byteBuffer, 0, null, new CompletionHandler<Integer, Object>() {
+            @Override
+            public void completed(Integer result, Object attachment) {
+
+                if (result == -1) {
+                    logger.error("파일을 작성하면서 문제가 발생했습니다.");
+                    return;
+                }
+
+                //파일로 저장이 끝났음으로 consumer에게 consumerGroup을 업데이트를 알림
+                UpdateGroupInfo responseGroupInfo = new UpdateGroupInfo(GroupStatus.UPDATE, message.getConsumerId());
+                ctx.channel().writeAndFlush(responseGroupInfo);
+
+                logger.info("Consumer group을 성공적으로 작성하였습니다.");
+
+                closeAsyncChannel(asynchronousFileChannel);
+            }
+
+            @Override
+            public void failed(Throwable exc, Object attachment) {
+                logger.error("Consumer group을 write하는데 실패했습니다.", exc);
+                closeAsyncChannel(asynchronousFileChannel);
+            }
+        });
+    }
+
+
+    private void processTheResults(File file, ChannelHandlerContext ctx, RequestPollingMessage message, byte[] bytes) throws Exception {
+        switch (message.getStatus()) {
+            case REBALANCING:
                 try {
                     ConsumerGroups consumerGroups = (ConsumerGroups) avroSerializers.getDeserialization(bytes, consumerGroupsSchema);
-
                     logger.info("ConsumerGroups을 성공적으로 읽었습니다. ->" + consumerGroups);
 
-                    writeAsyncFileChannel(file, consumerGroupsSchema, consumerGroups);
-
+                    executeRebalance(file, ctx, message, consumerGroupsSchema, consumerGroups);
                 } catch (EOFException e) {
                     logger.info("Consumer Group 파일에 값이 존재하지 않습니다.");
 
                     //처음 group에 진입하기 위한 객체 초기화 진행한다 또한 rebalance를 진행하도록 한다
                     ConsumerGroups consumerGroups = new ConsumerGroups();
-                    try {
-                        writeAsyncFileChannel(file, consumerGroupsSchema, consumerGroups);
-                    } catch (Exception exception) {
-                        logger.error("consumer group을 작성하던 중 문제가 발생했습니다.", e);
-                    }
+                    executeRebalance(file, ctx, message, consumerGroupsSchema, consumerGroups);
 
                 } catch (Exception e) {
                     logger.error("byte[]을 Object로 변환하는 과정에서 오류가 발생했습니다.", e);
@@ -233,12 +208,12 @@ public class ConsumerGroupHandler {
             case UPDATE:
                 try {
                     ConsumerGroups consumerGroups = (ConsumerGroups) avroSerializers.getDeserialization(bytes, consumerGroupsSchema);
-                    ConsumerGroup consumerGroup = consumerGroups.getGroupInfoMap().get(consumerMessage.getGroupId());
+                    ConsumerGroup consumerGroup = consumerGroups.getGroupInfoMap().get(message.getGroupId());
 
-                    ctx.channel().writeAndFlush(new UpdateGroupInfo(GroupStatus.COMPLETE, consumerGroup));
+                    ctx.channel().writeAndFlush(new UpdateGroupInfo(GroupStatus.COMPLETE, consumerGroup, message.getConsumerId()));
 
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    logger.error("업데이트를 진행하던 중 문제가 발생했습니다. ", e);
                 }
                 break;
         }

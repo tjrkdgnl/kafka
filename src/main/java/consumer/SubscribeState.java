@@ -7,25 +7,28 @@ import java.util.Set;
 
 public class SubscribeState {
 
-    private final Set<String> subscriptions;
+    private Set<String> subscriptions;
 
     private final Set<TopicPartition> assignedTopicWithPartition;
 
-    public SubscribeState(){
+    public SubscribeState() {
         assignedTopicWithPartition = new HashSet<>();
-        subscriptions = new HashSet<>();
     }
 
-    public void setAssignedTopicWithPartition(TopicPartition topicPartition){
+    public void setAssignedTopicWithPartition(TopicPartition topicPartition) {
         this.assignedTopicWithPartition.add(topicPartition);
     }
 
-    public void setSubscriptions(Set<String> topics){
+    public void setSubscriptions(Set<String> topics) {
         subscriptions.addAll(topics);
     }
 
-    public String[] getSubscriptions(){
-        return subscriptions.toArray(new String[subscriptions.size()-1]);
+    public Set<String> getSubscriptions() {
+        return subscriptions;
+    }
+
+    public String[] getTopics() {
+        return subscriptions.toArray(new String[subscriptions.size() - 1]);
     }
 
 }

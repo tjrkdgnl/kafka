@@ -1,6 +1,7 @@
 package consumer;
 
 import model.TopicPartition;
+import util.MemberState;
 
 import java.util.HashMap;
 import java.util.List;
@@ -10,12 +11,14 @@ import java.util.List;
  */
 public class ConsumerMetadata {
     //토픽에 대한 offset을 관리
-    private final HashMap<TopicPartition,Integer> topicPartitionAndOffset;
+    private final HashMap<TopicPartition, Integer> topicPartitionAndOffset;
     private int rebalanceId;
+    private MemberState status;
 
-    public ConsumerMetadata(){
+    public ConsumerMetadata() {
         topicPartitionAndOffset = new HashMap<>();
-        rebalanceId =0;
+        rebalanceId = 0;
+        status = MemberState.REBALANCING;
     }
 
     public int getRebalanceId() {
@@ -30,14 +33,25 @@ public class ConsumerMetadata {
         return topicPartitionAndOffset.get(topicPartition);
     }
 
-    public void setTopicPartitions(List<TopicPartition> topicPartitions){
-        for(TopicPartition topicPartition : topicPartitions){
-            this.topicPartitionAndOffset.put(topicPartition,0);
+    public void setTopicPartitions(List<TopicPartition> topicPartitions) {
+        for (TopicPartition topicPartition : topicPartitions) {
+            this.topicPartitionAndOffset.put(topicPartition, 0);
         }
     }
 
-    public void updateTopicPartition(int offset,TopicPartition topicPartition){
-        topicPartitionAndOffset.put(topicPartition,offset);
+    public void updateTopicPartition(int offset, TopicPartition topicPartition) {
+        topicPartitionAndOffset.put(topicPartition, offset);
     }
 
+    public HashMap<TopicPartition, Integer> getTopicPartitionAndOffset() {
+        return topicPartitionAndOffset;
+    }
+
+    public MemberState getStatus() {
+        return status;
+    }
+
+    public void setStatus(MemberState status) {
+        this.status = status;
+    }
 }

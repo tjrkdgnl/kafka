@@ -1,21 +1,21 @@
 package model;
 
-import util.ConsumerRequestStatus;
+import util.MemberState;
 
 import java.io.Serializable;
 
 public class StatusHeader implements Serializable {
-    private ConsumerRequestStatus status;
+    private MemberState status;
 
-    public StatusHeader(){
+    public StatusHeader() {
 
     }
 
-    public StatusHeader(ConsumerRequestStatus status){
-        this.status =status;
+    public StatusHeader(MemberState status) {
+        this.status = status;
     }
 
-    public ConsumerRequestStatus getStatus() {
+    public MemberState getStatus() {
         return status;
     }
 }

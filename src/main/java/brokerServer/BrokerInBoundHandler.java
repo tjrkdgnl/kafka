@@ -21,7 +21,7 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
 
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         try {
             Object obj = DataUtil.parsingBufToObject((ByteBuf) msg);
 
@@ -54,16 +54,17 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
                 RequestPollingMessage pollingMessage = (RequestPollingMessage) obj;
 
                 switch (pollingMessage.getStatus()) {
-                    case JOIN:
-                        consumerGroupHandler.init(ctx, pollingMessage).joinConsumerGroup();
+                    case REBALANCING:
+                        consumerGroupHandler.joinConsumerGroup(ctx, pollingMessage);
                         break;
 
                     case UPDATE:
-                        consumerGroupHandler.init(ctx, pollingMessage).checkConsumerGroup();
+                        consumerGroupHandler.getConsumerGroup(ctx, pollingMessage);
 
-                    case MESSAGE:
+                    case STABLE:
                         //RecordHandler를 이용해서 consumer에게 record전달
                         break;
+
                 }
             } else {
                 ctx.channel().writeAndFlush(new AckData(400, ERROR.TYPE_ERROR +
@@ -71,10 +72,8 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
             }
         } catch (Exception e) {
             logger.error("client로부터 받은 msg object를 parsing 하던 중, 문제가 발생했습니다.", e);
-
             ctx.channel().writeAndFlush(new AckData(500, "브로커에서 요청받은 object를 parsing 하던 중, 문제가 발생했습니다."));
         }
-
     }
 
     @Override
