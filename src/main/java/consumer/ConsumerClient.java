@@ -8,16 +8,16 @@ import java.util.HashSet;
 import java.util.Properties;
 
 public class ConsumerClient {
-    public static Properties properties;
+    private final Properties properties;
     private final SubscribeState subscribeState;
-    public ConsumerMetadata metadata;
+    private final ConsumerMetadata metadata;
     private final Fetcher fetcher;
 
 
     public ConsumerClient(Properties properties, ChannelFuture channelFuture, String groupId, String consumerId) {
         subscribeState = new SubscribeState();
         metadata = new ConsumerMetadata();
-        ConsumerClient.properties = properties;
+        this.properties = properties;
         fetcher = new Fetcher(metadata, subscribeState, channelFuture, groupId, consumerId);
     }
 
@@ -31,6 +31,8 @@ public class ConsumerClient {
 
     public boolean checkSubscription() {
         if (this.subscribeState.getSubscriptions() == null) {
+            return false;
+        } else if(this.subscribeState.getSubscriptions().isEmpty()){
             return false;
         } else {
             return true;

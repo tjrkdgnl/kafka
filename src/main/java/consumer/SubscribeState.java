@@ -20,6 +20,10 @@ public class SubscribeState {
     }
 
     public void setSubscriptions(Set<String> topics) {
+        if(subscriptions ==null){
+            subscriptions = new HashSet<>();
+        }
+
         subscriptions.addAll(topics);
     }
 

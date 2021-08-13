@@ -30,11 +30,11 @@ public class ConsumerManager {
         consumerMap.put(consumerId, consumer);
     }
 
-    public void poll(long timeout, String consumerId) {
+    public void poll(String consumerId) {
         ConsumerClient consumer = consumerMap.get(consumerId);
 
         if (!consumer.checkSubscription()) {
-            throw new NullPointerException("구독한 토픽이 존재하지 않습니다.");
+            throw new IllegalStateException("구독한 토픽이 존재하지 않습니다.");
         } else {
             consumer.poll();
         }

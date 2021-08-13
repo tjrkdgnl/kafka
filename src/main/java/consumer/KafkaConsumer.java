@@ -65,7 +65,7 @@ public class KafkaConsumer {
         try {
             //join부터 update까지 테스트를 위한 sleep
             Thread.sleep(4000);
-            ConsumerManager.getInstance().poll(4000, consumerId);
+            ConsumerManager.getInstance().poll( consumerId);
 
         } catch (Exception e) {
             logger.error("polling 중에 문제가 발생했습니다.", e);
