@@ -29,7 +29,7 @@ public class ConsumerInBoundHandler extends ChannelInboundHandlerAdapter {
                         break;
 
                     case COMPLETE:
-                        consumer.getFetcher().updateConsumerGroup(groupInfo.getConsumerGroup());
+                        consumer.getFetcher().updateTopicPartitions(groupInfo.getConsumerGroup());
                         break;
                 }
             } else {

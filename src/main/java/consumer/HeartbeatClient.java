@@ -22,6 +22,7 @@ public class HeartbeatClient {
     private final String consumerId;
     private final int sessionTimeout;
     private final int heartbeatInterval;
+    private Heartbeat heartbeat;
 
     public HeartbeatClient(Properties properties) {
         logger = Logger.getLogger(HeartbeatClient.class);
@@ -37,7 +38,7 @@ public class HeartbeatClient {
             int port = Integer.parseInt(address[1].trim());
             start(host, port);
 
-
+            heartbeat = new Heartbeat(channelFuture, groupId, consumerId, sessionTimeout);
         } catch (Exception e) {
             logger.error("heartbeatClient가 서버에 연결하던 중 문제가 생겼습니다. ", e);
         }
@@ -58,9 +59,6 @@ public class HeartbeatClient {
     }
 
     public void wakeUpHeartbeat() {
-        Heartbeat heartbeat = new Heartbeat(channelFuture, groupId, consumerId, sessionTimeout);
-        executorService.scheduleAtFixedRate(heartbeat, 0, heartbeatInterval, TimeUnit.MILLISECONDS);
+        executorService.schedule(heartbeat, heartbeatInterval, TimeUnit.MILLISECONDS);
     }
-
-
 }

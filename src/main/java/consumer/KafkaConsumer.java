@@ -7,9 +7,11 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import manager.NetworkManager;
+import model.TopicPartition;
 import org.apache.log4j.Logger;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Properties;
 
 public class KafkaConsumer {
@@ -56,14 +58,18 @@ public class KafkaConsumer {
         ConsumerManager.getInstance().addConsumer(consumerId, consumer);
     }
 
+    public void assign(List<TopicPartition> topicPartitions) {
+        ConsumerManager.getInstance().assign(topicPartitions, consumerId);
+    }
+
     public void subscribe(Collection<String> topics) {
         ConsumerManager.getInstance().subscribe(topics, consumerId);
     }
 
 
     public void poll() throws InterruptedException {
-        Thread.sleep(4000);
-        ConsumerManager.getInstance().poll(consumerId);
 
+        ConsumerManager.getInstance().poll(consumerId);
+        Thread.sleep(5000);
     }
 }

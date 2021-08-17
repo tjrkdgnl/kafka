@@ -3,8 +3,9 @@ package consumer;
 import io.netty.channel.ChannelFuture;
 import model.TopicPartition;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Properties;
 
 public class ConsumerClient {
@@ -17,28 +18,34 @@ public class ConsumerClient {
         subscribeState = new SubscribeState();
         metadata = new ConsumerMetadata();
         fetcher = new Fetcher(metadata, subscribeState, channelFuture, groupId, consumerId);
-
         heartbeatClient = new HeartbeatClient(properties);
-        heartbeatClient.wakeUpHeartbeat();
     }
 
-    public void assign(TopicPartition topicPartition) {
-        this.subscribeState.setAssignedTopicWithPartition(topicPartition);
+    public void assign(List<TopicPartition> topicPartition) {
+        this.subscribeState.setSubscriptions(topicPartition);
     }
 
     public void subscribe(Collection<String> topics) {
-        this.subscribeState.setSubscriptions(new HashSet<>(topics));
+        List<TopicPartition> topicPartitions = new ArrayList<>();
+
+        for (String topic : topics) {
+            topicPartitions.add(new TopicPartition(topic, -1));
+        }
+
+        this.subscribeState.setSubscriptions(topicPartitions);
     }
 
 
     public boolean checkSubscription() {
-        if (this.subscribeState.getSubscriptions() == null) {
-            return false;
-        } else if (this.subscribeState.getSubscriptions().isEmpty()) {
+        if (this.subscribeState.getSubscriptions() == null || this.subscribeState.getSubscriptions().isEmpty()) {
             return false;
         } else {
             return true;
         }
+    }
+
+    public void wakeUpHeartbeat() {
+        heartbeatClient.wakeUpHeartbeat();
     }
 
     //추후에 ConsumerRecords 리턴하도록 구현하기

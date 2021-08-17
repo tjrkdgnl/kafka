@@ -4,6 +4,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -11,17 +12,37 @@ public class ConsumerGroup implements Serializable {
     private String groupId;
     private int rebalanceId;
 
-
     //member가 갖고 있는 topic list
     private HashMap<String, List<TopicPartition>> ownershipMap;
-
     //topic을 구독하고 있는 consumer list
     private final HashMap<String, List<String>> topicMap;
+    //컨슈머로부터 직접 할당된 topicPartition
+    private final HashMap<String, List<TopicPartition>> assignedOwnershipMap;
+
 
     public ConsumerGroup() {
         ownershipMap = new HashMap<>();
         topicMap = new HashMap<>();
+        assignedOwnershipMap = new HashMap<>();
         rebalanceId = 0;
+    }
+
+    public boolean checkConsumer(String consumerId) {
+        for (String consumer : ownershipMap.keySet()) {
+            if (consumer.equals(consumerId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void addAssignedTopicPartition(String consumerId, TopicPartition topicPartition) {
+        List<TopicPartition> list = assignedOwnershipMap.getOrDefault(consumerId, new ArrayList<>());
+
+        if (!list.contains(topicPartition)) {
+            list.add(topicPartition);
+        }
+        assignedOwnershipMap.put(consumerId, list);
     }
 
     public String getGroupId() {
@@ -53,11 +74,26 @@ public class ConsumerGroup implements Serializable {
     }
 
     public void initOwnership() {
-        this.ownershipMap = new HashMap<>();
+        ownershipMap = new HashMap<>();
+
+        for (String consumer : assignedOwnershipMap.keySet()) {
+            for (List<TopicPartition> topicPartitions : assignedOwnershipMap.values()) {
+                ownershipMap.put(consumer, new ArrayList<>(topicPartitions));
+            }
+        }
     }
 
-    public void addOwnership(String consumer, List<TopicPartition> topicPartitions) {
+    public void addOwnership(String consumer, TopicPartition topicPartition) {
+        List<TopicPartition> topicPartitions = ownershipMap.get(consumer);
+
+        if (!topicPartitions.contains(topicPartition)) {
+            topicPartitions.add(topicPartition);
+        }
         ownershipMap.put(consumer, topicPartitions);
+    }
+
+    public void removeOwnership(String consumerId) {
+        ownershipMap.remove(consumerId);
     }
 
     public HashMap<String, List<TopicPartition>> getOwnershipMap() {

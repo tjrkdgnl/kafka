@@ -28,7 +28,7 @@ public class Fetcher {
         this.metadata.setStatus(status);
     }
 
-    public void updateConsumerGroup(ConsumerGroup consumerGroup) {
+    public void updateTopicPartitions(ConsumerGroup consumerGroup) {
         this.metadata.setRebalanceId(consumerGroup.getRebalanceId());
 
         this.metadata.setTopicPartitions(consumerGroup.getOwnershipMap().get(consumerId));
@@ -36,13 +36,17 @@ public class Fetcher {
         logger.info("consumerGroup-> " + consumerGroup);
         logger.info("업데이트 완료");
 
-        this.metadata.setStatus(MemberState.STABLE);
         this.metadata.setRebalanceId(consumerGroup.getRebalanceId());
+        this.metadata.setTopicPartitions(consumerGroup.getOwnershipMap().get(consumerId));
+        this.metadata.setStatus(MemberState.STABLE);
     }
 
     public void pollForFetches() {
-        channelFuture.channel().writeAndFlush(new RequestMessage(this.metadata.getStatus(), metadata.getRebalanceId(),
-                subscribeState.getTopics(), consumerId, groupId));
+        //subscribe인 경우
+        if (subscribeState.getSubscriptions().size() != 0) {
+            channelFuture.channel().writeAndFlush(new RequestMessage(this.metadata.getStatus(), metadata.getRebalanceId(),
+                    subscribeState.getSubscriptions(), consumerId, groupId));
+        }
     }
 
 }

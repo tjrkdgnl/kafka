@@ -1,9 +1,9 @@
 package consumer;
 
+import model.TopicPartition;
+
 import java.util.Arrays;
 import java.util.Properties;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 public class ConsumerApplication {
 
@@ -19,6 +19,8 @@ public class ConsumerApplication {
 
 
         KafkaConsumer kafkaConsumer = new KafkaConsumer(properties);
+
+        kafkaConsumer.assign(Arrays.asList(new TopicPartition("group", 1)));
 
         kafkaConsumer.subscribe(Arrays.asList("test"));
 

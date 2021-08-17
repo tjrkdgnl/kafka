@@ -4,6 +4,7 @@ import model.ConsumerGroup;
 import model.Topic;
 import model.TopicPartition;
 import model.Topics;
+import model.request.RequestMessage;
 import org.apache.log4j.Logger;
 import util.RebalanceState;
 
@@ -12,65 +13,78 @@ import java.util.List;
 import java.util.Set;
 
 public class GroupRebalanceHandler {
-    private final Logger logger = Logger.getLogger(GroupRebalanceHandler.class);
+    private final Logger logger;
     private RebalanceCallbackListener rebalanceCallbackListener;
 
 
-    public void runRebalance(ConsumerGroup consumerGroup) throws Exception {
+    public GroupRebalanceHandler() {
+        logger = Logger.getLogger(GroupRebalanceHandler.class);
+    }
+
+    public void runRebalance(ConsumerGroup consumerGroup, RequestMessage message) throws Exception {
         try {
+            //저장된 consumerGroup을 가져온다
+            consumerGroup.setGroupId(message.getGroupId());
+            consumerGroup.setRebalanceId(consumerGroup.getRebalanceId() + 1);
+
+            //리밸런스를 위해서 topic을 구독하는 consumer 리스트를 생성한다
+            for (TopicPartition topicPartition : message.getSubscriptions()) {
+                List<String> consumerList = consumerGroup.getTopicMap().getOrDefault(topicPartition.getTopic(), new ArrayList<>());
+
+                //구체적인 topic과 partition을 구독한 경우
+                if (topicPartition.getPartition() != -1) {
+                    consumerGroup.addAssignedTopicPartition(message.getConsumerId(), topicPartition);
+                }
+
+                if (!consumerList.contains(message.getConsumerId())) {
+                    consumerList.add(message.getConsumerId());
+                }
+                consumerGroup.setConsumerList(topicPartition.getTopic(), consumerList);
+            }
+
             //consumer들이 구독한 토픽들을 가져온다
             Set<String> subscriptionTopics = consumerGroup.getTopicMap().keySet();
 
             //현재 broker에서 관리하고있는 topic list
             Topics topics = BrokerServer.topics;
 
+            //현재 맵핑관계를 초기화시킨다
+            consumerGroup.initOwnership();
+
             //구독하려는 topic이 존재하는 topic인지 확인한다
             for (String subscribedTopic : subscriptionTopics) {
                 for (Topic topic : topics.getTopicList()) {
-                    if (topic.getTopic().equals(subscribedTopic)) {
 
+                    if (topic.getTopic().equals(subscribedTopic)) {
                         int consumerIdx = 0;
 
                         //해당 토픽을 구독하려는 consumer list를 불러온다
                         List<String> consumersInGroup = consumerGroup.getTopicMap().get(subscribedTopic);
-                        List<String> currentConsumers = new ArrayList<>();
-
-                        //heartbeat으로 확인된 컨슈머들을 불러온다
-                        List<String> runningConsumers = DataRepository.getInstance().getConsumers(consumerGroup.getGroupId());
-                        logger.info(runningConsumers);
-
-                        //모든 컨슈머가 종료된 상태인 경우 group을 consumerGroups file에서 삭제한다
-                        if (runningConsumers == null || runningConsumers.size() == 0) {
-                            rebalanceCallbackListener.setResult(RebalanceState.EXIT);
-                            return;
-                        }
-
-                        //초기 시작은 poll이 먼저 시작하기 때문에 첫 polling 이후부터 체크한다
-                        for (String consumer : consumersInGroup) {
-                            if (runningConsumers.contains(consumer)) {
-                                currentConsumers.add(consumer);
-                            }
-                        }
-
-                        //모든 partition의 ownership을 초기화 한다
-                        consumerGroup.initOwnership();
-                        consumerGroup.updateTopicMap(subscribedTopic, currentConsumers);
 
                         //토픽의 partition을 consumer들에게 분배한다
                         for (int partition = 0; partition < topic.getPartitions(); partition++) {
-
-                            //consumer와 ownership을 갖을 topicPartition들을 위해 list를 불러온다
-                            List<TopicPartition> topicPartitions = consumerGroup.getOwnershipMap().getOrDefault(currentConsumers.get(consumerIdx), new ArrayList<>());
-
                             TopicPartition topicPartition = new TopicPartition(subscribedTopic, partition);
-                            topicPartitions.add(topicPartition);
+
+                            boolean checkTopicPartition = false;
+
+                            //consumer와 이미 맵핑관계에 있는 topicPartition인지 확인
+                            for (List<TopicPartition> topicPartitions : consumerGroup.getOwnershipMap().values()) {
+                                if (topicPartitions.contains(topicPartition)) {
+                                    checkTopicPartition = true;
+                                    break;
+                                }
+                            }
+
+                            if (checkTopicPartition) {
+                                continue;
+                            }
 
                             //consumer와 토픽의 파티션을 맵핑하고 저장한다
-                            consumerGroup.addOwnership(currentConsumers.get(consumerIdx++), topicPartitions);
+                            consumerGroup.addOwnership(consumersInGroup.get(consumerIdx++), topicPartition);
 
-                            //첫 consumer부터 다시 topic의 파티션을 할당하기 위해 index를 초기화 한다
-                            if (consumerIdx >= currentConsumers.size()) {
-                                consumerIdx %= currentConsumers.size();
+                            //첫 consumer부터 다시 topic의 파티션을 할당하기 위해 index를 초기화한다
+                            if (consumerIdx >= consumersInGroup.size()) {
+                                consumerIdx %= consumersInGroup.size();
                             }
                         }
                     }
@@ -86,12 +100,12 @@ public class GroupRebalanceHandler {
         }
     }
 
-    public void setListener(RebalanceCallbackListener rebalanceCallbackListener) {
-        this.rebalanceCallbackListener = rebalanceCallbackListener;
-    }
-
     public interface RebalanceCallbackListener {
         void setResult(RebalanceState status) throws Exception;
+    }
+
+    public void setListener(RebalanceCallbackListener rebalanceCallbackListener) {
+        this.rebalanceCallbackListener = rebalanceCallbackListener;
     }
 
 }

@@ -19,9 +19,7 @@ import java.nio.channels.CompletionHandler;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -98,20 +96,6 @@ public class ConsumerGroupHandler {
 
     private void executeRebalance(File file, ChannelHandlerContext ctx, RequestMessage message,
                                   ConsumerGroup consumerGroup) throws Exception {
-        //저장된 consumerGroup을 가져온다
-        consumerGroup.setGroupId(message.getGroupId());
-        consumerGroup.setRebalanceId(consumerGroup.getRebalanceId() + 1);
-
-        //topic을 구독하는 consumer 리스트를 생성한다
-        if (message.getTopics() != null) {
-            for (String topic : message.getTopics()) {
-                List<String> consumerList = consumerGroup.getTopicMap().getOrDefault(topic, new ArrayList<>());
-                if (!consumerList.contains(message.getConsumerId())) {
-                    consumerList.add(message.getConsumerId());
-                }
-                consumerGroup.setConsumerList(topic, consumerList);
-            }
-        }
 
         groupRebalanceHandler.setListener(status -> {
             switch (status) {
@@ -119,20 +103,13 @@ public class ConsumerGroupHandler {
                     //Group status 변경하기
                     writeAsyncFileChannel(file, ctx, message, consumerGroup);
                     break;
-                case EXIT:
-                    if (file.delete()) {
-                        logger.info("ConsumerGroup을 성공적으로 삭제했습니다.");
-                    } else {
-                        logger.error("ConsumerGroup을 삭제하지 못했습니다.");
-                    }
-                    break;
                 case FAIL:
                     logger.error("리밸런스를 진행하던 중 문제가 발생했습니다.");
                     break;
             }
         });
 
-        groupRebalanceHandler.runRebalance(consumerGroup);
+        groupRebalanceHandler.runRebalance(consumerGroup,message);
     }
 
 
@@ -180,10 +157,15 @@ public class ConsumerGroupHandler {
         switch (message.getStatus()) {
             case REBALANCING:
                 try {
-                    ConsumerGroup consumerGroups = (ConsumerGroup) avroSerializers.getDeserialization(bytes, consumerGroupSchema);
-                    logger.info("ConsumerGroups을 성공적으로 읽었습니다. ->" + consumerGroups);
+                    ConsumerGroup consumerGroup = (ConsumerGroup) avroSerializers.getDeserialization(bytes, consumerGroupSchema);
+                    logger.info("ConsumerGroups을 성공적으로 읽었습니다. ->" + consumerGroup);
 
-                    executeRebalance(file, ctx, message, consumerGroups);
+                    if (consumerGroup.checkConsumer(message.getConsumerId())) {
+                        ctx.channel().writeAndFlush(new UpdateGroupInfo(GroupStatus.UPDATE, message.getConsumerId()));
+                    } else {
+                        executeRebalance(file, ctx, message, consumerGroup);
+                    }
+
                 } catch (EOFException e) {
                     logger.info("Consumer Group 파일에 값이 존재하지 않습니다.");
 

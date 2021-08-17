@@ -2,37 +2,22 @@ package consumer;
 
 import model.TopicPartition;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 public class SubscribeState {
+    private List<TopicPartition> subscriptions;
 
-    private Set<String> subscriptions;
 
-    private final Set<TopicPartition> assignedTopicWithPartition;
-
-    public SubscribeState() {
-        assignedTopicWithPartition = new HashSet<>();
-    }
-
-    public void setAssignedTopicWithPartition(TopicPartition topicPartition) {
-        this.assignedTopicWithPartition.add(topicPartition);
-    }
-
-    public void setSubscriptions(Set<String> topics) {
-        if(subscriptions ==null){
-            subscriptions = new HashSet<>();
+    public void setSubscriptions(List<TopicPartition> topics) {
+        if (subscriptions == null) {
+            subscriptions = new ArrayList<>();
         }
 
         subscriptions.addAll(topics);
     }
 
-    public Set<String> getSubscriptions() {
-        return subscriptions;
+    public List<TopicPartition> getSubscriptions() {
+        return new ArrayList<>(subscriptions);
     }
-
-    public String[] getTopics() {
-        return subscriptions.toArray(new String[subscriptions.size() - 1]);
-    }
-
 }
