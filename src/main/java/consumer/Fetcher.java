@@ -2,7 +2,7 @@ package consumer;
 
 import io.netty.channel.ChannelFuture;
 import model.ConsumerGroup;
-import model.request.RequestPollingMessage;
+import model.request.RequestMessage;
 import org.apache.log4j.Logger;
 import util.MemberState;
 
@@ -37,10 +37,11 @@ public class Fetcher {
         logger.info("업데이트 완료");
 
         this.metadata.setStatus(MemberState.STABLE);
+        this.metadata.setRebalanceId(consumerGroup.getRebalanceId());
     }
 
     public void pollForFetches() {
-        channelFuture.channel().writeAndFlush(new RequestPollingMessage(this.metadata.getStatus(), metadata.getRebalanceId(),
+        channelFuture.channel().writeAndFlush(new RequestMessage(this.metadata.getStatus(), metadata.getRebalanceId(),
                 subscribeState.getTopics(), consumerId, groupId));
     }
 

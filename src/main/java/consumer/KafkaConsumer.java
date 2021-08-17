@@ -41,7 +41,7 @@ public class KafkaConsumer {
 
         logger.info("host: " + host + " port: " + port);
 
-        Bootstrap bootstrap = NetworkManager.getInstance().createProducerClient(eventLoopGroup, host, port)
+        Bootstrap bootstrap = NetworkManager.getInstance().buildClient(eventLoopGroup, host, port)
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel socketChannel) {
@@ -61,15 +61,9 @@ public class KafkaConsumer {
     }
 
 
-    public void poll() {
-        try {
-            //join부터 update까지 테스트를 위한 sleep
-            Thread.sleep(4000);
-            ConsumerManager.getInstance().poll( consumerId);
+    public void poll() throws InterruptedException {
+        Thread.sleep(4000);
+        ConsumerManager.getInstance().poll(consumerId);
 
-        } catch (Exception e) {
-            logger.error("polling 중에 문제가 발생했습니다.", e);
-            System.exit(-1);
-        }
     }
 }

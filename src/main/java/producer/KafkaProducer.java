@@ -14,17 +14,17 @@ import org.apache.log4j.Logger;
 public class KafkaProducer {
     private ChannelFuture channelFuture;
     private final Logger logger = Logger.getLogger(KafkaProducer.class);
-    public static final Sender sender =new Sender();
+    public static final Sender sender = new Sender();
 
     public KafkaProducer(String host, int port) throws Exception {
         start(host, port);
     }
 
-    public void start(String host, int port)  {
+    public void start(String host, int port) {
         EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
 
         try {
-            Bootstrap bootstrap = NetworkManager.getInstance().createProducerClient(eventLoopGroup, host, port)
+            Bootstrap bootstrap = NetworkManager.getInstance().buildClient(eventLoopGroup, host, port)
                     .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel socketChannel) throws Exception {
@@ -45,12 +45,10 @@ public class KafkaProducer {
 
         if (record == null) {
             throw new NullPointerException("record가 존재하지 않습니다.");
-        }
-        else if (record.getTopic() == null) {
+        } else if (record.getTopic() == null) {
             throw new NullPointerException("topic이 존재하지 않습니다.");
-        }
-        else {
-            sender.getTopicMetaData(channelFuture,record);
+        } else {
+            sender.getTopicMetaData(channelFuture, record);
         }
     }
 

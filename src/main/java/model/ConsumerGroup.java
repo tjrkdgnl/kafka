@@ -40,8 +40,12 @@ public class ConsumerGroup implements Serializable {
         this.rebalanceId = rebalanceId;
     }
 
-    public void setConsumerList(String topic, List<String> consumerList){
-        this.topicMap.put(topic,consumerList);
+    public void setConsumerList(String topic, List<String> consumerList) {
+        this.topicMap.put(topic, consumerList);
+    }
+
+    public void updateTopicMap(String topic, List<String> currentConsumers) {
+        this.topicMap.put(topic, currentConsumers);
     }
 
     public HashMap<String, List<String>> getTopicMap() {
@@ -52,8 +56,8 @@ public class ConsumerGroup implements Serializable {
         this.ownershipMap = new HashMap<>();
     }
 
-    public void addOwnership(String consumer,List<TopicPartition> topicPartitions){
-        ownershipMap.put(consumer,topicPartitions);
+    public void addOwnership(String consumer, List<TopicPartition> topicPartitions) {
+        ownershipMap.put(consumer, topicPartitions);
     }
 
     public HashMap<String, List<TopicPartition>> getOwnershipMap() {

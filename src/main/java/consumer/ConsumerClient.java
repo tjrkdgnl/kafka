@@ -8,17 +8,18 @@ import java.util.HashSet;
 import java.util.Properties;
 
 public class ConsumerClient {
-    private final Properties properties;
     private final SubscribeState subscribeState;
     private final ConsumerMetadata metadata;
     private final Fetcher fetcher;
-
+    private final HeartbeatClient heartbeatClient;
 
     public ConsumerClient(Properties properties, ChannelFuture channelFuture, String groupId, String consumerId) {
         subscribeState = new SubscribeState();
         metadata = new ConsumerMetadata();
-        this.properties = properties;
         fetcher = new Fetcher(metadata, subscribeState, channelFuture, groupId, consumerId);
+
+        heartbeatClient = new HeartbeatClient(properties);
+        heartbeatClient.wakeUpHeartbeat();
     }
 
     public void assign(TopicPartition topicPartition) {
@@ -29,10 +30,11 @@ public class ConsumerClient {
         this.subscribeState.setSubscriptions(new HashSet<>(topics));
     }
 
+
     public boolean checkSubscription() {
         if (this.subscribeState.getSubscriptions() == null) {
             return false;
-        } else if(this.subscribeState.getSubscriptions().isEmpty()){
+        } else if (this.subscribeState.getSubscriptions().isEmpty()) {
             return false;
         } else {
             return true;

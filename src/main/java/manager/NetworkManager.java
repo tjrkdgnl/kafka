@@ -27,7 +27,7 @@ public class NetworkManager {
         return SingleTonNetworkManager.networkManager;
     }
 
-    public Bootstrap createProducerClient(EventLoopGroup eventLoopGroup, String host, int port) throws Exception {
+    public Bootstrap buildClient(EventLoopGroup eventLoopGroup, String host, int port) throws Exception {
         Bootstrap bootstrap = new Bootstrap();
 
         bootstrap.group(eventLoopGroup)
