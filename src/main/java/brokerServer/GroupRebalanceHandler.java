@@ -8,6 +8,7 @@ import model.request.RequestMessage;
 import org.apache.log4j.Logger;
 import util.RebalanceState;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -16,14 +17,13 @@ public class GroupRebalanceHandler {
     private final Logger logger;
     private RebalanceCallbackListener rebalanceCallbackListener;
 
-
-    public GroupRebalanceHandler() {
-        logger = Logger.getLogger(GroupRebalanceHandler.class);
+    GroupRebalanceHandler() {
+        this.logger = Logger.getLogger(GroupRebalanceHandler.class);
     }
+
 
     public void runRebalance(ConsumerGroup consumerGroup, RequestMessage message) throws Exception {
         try {
-            //저장된 consumerGroup을 가져온다
             consumerGroup.setGroupId(message.getGroupId());
             consumerGroup.setRebalanceId(consumerGroup.getRebalanceId() + 1);
 
@@ -93,12 +93,59 @@ public class GroupRebalanceHandler {
 
             rebalanceCallbackListener.setResult(RebalanceState.SUCCESS);
 
-        } catch (
-                Exception e) {
+        } catch (Exception e) {
             logger.error("파티션 분배를 진행 중에 문제가 발생했습니다.", e);
             rebalanceCallbackListener.setResult(RebalanceState.FAIL);
         }
     }
+
+    public void runRebalanceForRemoving(File file, ConsumerGroup consumerGroup) throws Exception {
+        try {
+            //consumer들이 구독한 토픽들을 가져온다
+            Set<String> subscriptionTopics = consumerGroup.getTopicMap().keySet();
+
+            Set<String> consumersOutGroup = consumerGroup.getOwnershipMap().keySet();
+
+            //하트비트를 통해 확인된 컨슈머들
+            List<String> runningConsumers = DataRepository.getInstance().getConsumers(consumerGroup.getGroupId());
+            logger.info(runningConsumers);
+
+            //제거될 컨슈머들
+            runningConsumers.forEach(consumersOutGroup::remove);
+
+            List<TopicPartition> remainingTopicPartitions = new ArrayList<>();
+
+            for (String removedConsumer : consumersOutGroup) {
+                remainingTopicPartitions.addAll(consumerGroup.getOwnershipMap().get(removedConsumer));
+                consumerGroup.removeOwnership(removedConsumer);
+
+                for (String topic : subscriptionTopics) {
+                    List<String> consumers = consumerGroup.getTopicMap().get(topic);
+                    consumers.remove(removedConsumer);
+                    consumerGroup.updateTopicMap(topic, consumers);
+                }
+            }
+
+            int consumerIdx = 0;
+            List<String> currentConsumers = new ArrayList<>(consumerGroup.getOwnershipMap().keySet());
+
+            for (TopicPartition topicPartition : remainingTopicPartitions) {
+                consumerGroup.addOwnership(currentConsumers.get(consumerIdx++), topicPartition);
+
+                if (consumerIdx >= currentConsumers.size()) {
+                    consumerIdx = 0;
+                }
+            }
+
+            consumerGroup.setRebalanceId(consumerGroup.getRebalanceId() + 1);
+            rebalanceCallbackListener.setResult(RebalanceState.SUCCESS);
+
+        } catch (Exception e) {
+            logger.error("파티션 분배를 진행 중에 문제가 발생했습니다.", e);
+            rebalanceCallbackListener.setResult(RebalanceState.FAIL);
+        }
+    }
+
 
     public interface RebalanceCallbackListener {
         void setResult(RebalanceState status) throws Exception;

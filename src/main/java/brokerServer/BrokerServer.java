@@ -1,7 +1,6 @@
 package brokerServer;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import manager.NetworkManager;
@@ -38,9 +37,9 @@ public class BrokerServer {
 
         try {
             ServerBootstrap bootstrap = NetworkManager.getInstance().buildServer(eventLoopGroup, workerEventLoopGroup, host, port);
-            ChannelFuture channelFuture = bootstrap.bind().sync();
+            bootstrap.bind().sync();
 
-            HeartbeatScheduler heartbeatScheduler = new HeartbeatScheduler(properties, channelFuture.channel().pipeline().firstContext());
+            HeartbeatScheduler heartbeatScheduler = new HeartbeatScheduler(properties);
             executorService.scheduleAtFixedRate(heartbeatScheduler, 0, 6000, TimeUnit.MILLISECONDS);
 
         } catch (Exception e) {

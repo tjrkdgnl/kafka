@@ -9,6 +9,7 @@ import org.apache.avro.reflect.ReflectData;
 import org.apache.log4j.Logger;
 import util.AvroSerializers;
 import util.GroupStatus;
+import util.MemberState;
 
 import java.io.EOFException;
 import java.io.File;
@@ -109,9 +110,12 @@ public class ConsumerGroupHandler {
             }
         });
 
-        groupRebalanceHandler.runRebalance(consumerGroup,message);
+        if (message.getStatus() == MemberState.JOIN)
+            groupRebalanceHandler.runRebalance(consumerGroup, message);
+        else if (message.getStatus() == MemberState.REMOVE) {
+            groupRebalanceHandler.runRebalanceForRemoving(file, consumerGroup);
+        }
     }
-
 
     private void writeAsyncFileChannel(File file, ChannelHandlerContext ctx, RequestMessage message, ConsumerGroup consumerGroup) throws Exception {
 
@@ -133,13 +137,10 @@ public class ConsumerGroupHandler {
                     return;
                 }
 
-                //파일로 저장이 끝났음으로 consumer에게 consumerGroup을 업데이트를 알림
-                if (message.getConsumerId() != null) {
-                    UpdateGroupInfo responseGroupInfo = new UpdateGroupInfo(GroupStatus.UPDATE, message.getConsumerId());
-                    ctx.channel().writeAndFlush(responseGroupInfo);
-
-                    logger.info("Consumer group을 성공적으로 작성하였습니다.");
+                if (ctx != null) {
+                    ctx.channel().writeAndFlush(new UpdateGroupInfo(GroupStatus.UPDATE, message.getConsumerId()));
                 }
+                logger.info("Consumer group을 성공적으로 작성하였습니다.");
 
                 closeAsyncChannel(asynchronousFileChannel);
             }
@@ -155,7 +156,7 @@ public class ConsumerGroupHandler {
 
     private void processTheResults(File file, ChannelHandlerContext ctx, RequestMessage message, byte[] bytes) throws Exception {
         switch (message.getStatus()) {
-            case REBALANCING:
+            case JOIN:
                 try {
                     ConsumerGroup consumerGroup = (ConsumerGroup) avroSerializers.getDeserialization(bytes, consumerGroupSchema);
                     logger.info("ConsumerGroups을 성공적으로 읽었습니다. ->" + consumerGroup);
@@ -178,11 +179,19 @@ public class ConsumerGroupHandler {
                 }
                 break;
 
+            case REMOVE:
+                try {
+                    ConsumerGroup consumerGroup = (ConsumerGroup) avroSerializers.getDeserialization(bytes, consumerGroupSchema);
+                    executeRebalance(file, null, message, consumerGroup);
+                } catch (Exception e) {
+                    logger.error("byte[]을 Object로 변환하는 과정에서 오류가 발생했습니다.", e);
+                }
+                break;
+
             case UPDATE:
                 try {
                     ConsumerGroup consumerGroup = (ConsumerGroup) avroSerializers.getDeserialization(bytes, consumerGroupSchema);
                     ctx.channel().writeAndFlush(new UpdateGroupInfo(GroupStatus.COMPLETE, consumerGroup, message.getConsumerId()));
-
                 } catch (IOException e) {
                     logger.error("업데이트를 진행하던 중 문제가 발생했습니다. ", e);
                 }
@@ -193,8 +202,7 @@ public class ConsumerGroupHandler {
 
                 //file로 관리되고 있는 consumer Group에 변화가 생겼다면 컨슈머에게 update 요청을 보낸다
                 if (consumerGroup.getRebalanceId() > message.getRebalanceId()) {
-                    UpdateGroupInfo responseGroupInfo = new UpdateGroupInfo(GroupStatus.UPDATE, message.getConsumerId());
-                    ctx.channel().writeAndFlush(responseGroupInfo);
+                    ctx.channel().writeAndFlush(new UpdateGroupInfo(GroupStatus.UPDATE, message.getConsumerId()));
                 } else {
                     //message 전송 하는 로직 구현
                 }

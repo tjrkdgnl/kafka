@@ -84,7 +84,7 @@ public class ConsumerGroup implements Serializable {
     }
 
     public void addOwnership(String consumer, TopicPartition topicPartition) {
-        List<TopicPartition> topicPartitions = ownershipMap.get(consumer);
+        List<TopicPartition> topicPartitions = ownershipMap.getOrDefault(consumer, new ArrayList<>());
 
         if (!topicPartitions.contains(topicPartition)) {
             topicPartitions.add(topicPartition);
