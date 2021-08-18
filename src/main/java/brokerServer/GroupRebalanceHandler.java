@@ -15,14 +15,13 @@ import java.util.Set;
 
 public class GroupRebalanceHandler {
     private final Logger logger;
-    private RebalanceCallbackListener rebalanceCallbackListener;
 
     GroupRebalanceHandler() {
         this.logger = Logger.getLogger(GroupRebalanceHandler.class);
     }
 
 
-    public void runRebalance(ConsumerGroup consumerGroup, RequestMessage message) throws Exception {
+    public void runRebalance(ConsumerGroup consumerGroup, RequestMessage message, RebalanceCallbackListener listener) throws Exception {
         try {
             consumerGroup.setGroupId(message.getGroupId());
             consumerGroup.setRebalanceId(consumerGroup.getRebalanceId() + 1);
@@ -84,22 +83,22 @@ public class GroupRebalanceHandler {
 
                             //첫 consumer부터 다시 topic의 파티션을 할당하기 위해 index를 초기화한다
                             if (consumerIdx >= consumersInGroup.size()) {
-                                consumerIdx %= consumersInGroup.size();
+                                consumerIdx = 0;
                             }
                         }
                     }
                 }
             }
 
-            rebalanceCallbackListener.setResult(RebalanceState.SUCCESS);
+            listener.setResult(RebalanceState.SUCCESS);
 
         } catch (Exception e) {
             logger.error("파티션 분배를 진행 중에 문제가 발생했습니다.", e);
-            rebalanceCallbackListener.setResult(RebalanceState.FAIL);
+            listener.setResult(RebalanceState.FAIL);
         }
     }
 
-    public void runRebalanceForRemoving(File file, ConsumerGroup consumerGroup) throws Exception {
+    public void runRebalanceForRemoving(File file, ConsumerGroup consumerGroup,RebalanceCallbackListener listener) throws Exception {
         try {
             //consumer들이 구독한 토픽들을 가져온다
             Set<String> subscriptionTopics = consumerGroup.getTopicMap().keySet();
@@ -138,11 +137,11 @@ public class GroupRebalanceHandler {
             }
 
             consumerGroup.setRebalanceId(consumerGroup.getRebalanceId() + 1);
-            rebalanceCallbackListener.setResult(RebalanceState.SUCCESS);
+            listener.setResult(RebalanceState.SUCCESS);
 
         } catch (Exception e) {
             logger.error("파티션 분배를 진행 중에 문제가 발생했습니다.", e);
-            rebalanceCallbackListener.setResult(RebalanceState.FAIL);
+            listener.setResult(RebalanceState.FAIL);
         }
     }
 
@@ -150,9 +149,4 @@ public class GroupRebalanceHandler {
     public interface RebalanceCallbackListener {
         void setResult(RebalanceState status) throws Exception;
     }
-
-    public void setListener(RebalanceCallbackListener rebalanceCallbackListener) {
-        this.rebalanceCallbackListener = rebalanceCallbackListener;
-    }
-
 }

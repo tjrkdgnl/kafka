@@ -98,22 +98,21 @@ public class ConsumerGroupHandler {
     private void executeRebalance(File file, ChannelHandlerContext ctx, RequestMessage message,
                                   ConsumerGroup consumerGroup) throws Exception {
 
-        groupRebalanceHandler.setListener(status -> {
+        GroupRebalanceHandler.RebalanceCallbackListener listener = status -> {
             switch (status) {
                 case SUCCESS:
-                    //Group status 변경하기
                     writeAsyncFileChannel(file, ctx, message, consumerGroup);
                     break;
                 case FAIL:
                     logger.error("리밸런스를 진행하던 중 문제가 발생했습니다.");
                     break;
             }
-        });
+        };
 
         if (message.getStatus() == MemberState.JOIN)
-            groupRebalanceHandler.runRebalance(consumerGroup, message);
+            groupRebalanceHandler.runRebalance(consumerGroup, message, listener);
         else if (message.getStatus() == MemberState.REMOVE) {
-            groupRebalanceHandler.runRebalanceForRemoving(file, consumerGroup);
+            groupRebalanceHandler.runRebalanceForRemoving(file, consumerGroup, listener);
         }
     }
 

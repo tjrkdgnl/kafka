@@ -40,7 +40,8 @@ public class BrokerServer {
             bootstrap.bind().sync();
 
             HeartbeatScheduler heartbeatScheduler = new HeartbeatScheduler(properties);
-            executorService.scheduleAtFixedRate(heartbeatScheduler, 0, 6000, TimeUnit.MILLISECONDS);
+            int heartBeatInterval = Integer.parseInt(properties.getProperty(BrokerConfig.HEARTBEAT_INTERVAL.getValue(), "6000"));
+            executorService.scheduleAtFixedRate(heartbeatScheduler, 0, heartBeatInterval, TimeUnit.MILLISECONDS);
 
         } catch (Exception e) {
             logger.error("broker server를 실행하던 중 문제가 발생했습니다.", e);
