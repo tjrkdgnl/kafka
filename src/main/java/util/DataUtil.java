@@ -26,6 +26,9 @@ public class DataUtil {
         ByteBuf byteBuf = Unpooled.directBuffer();
         byteBuf.writeBytes(buf);
 
+        bos.close();
+        oos.close();
+
         return byteBuf;
     }
 
@@ -40,6 +43,9 @@ public class DataUtil {
 
         ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
         ObjectInputStream ois = new ObjectInputStream(bis);
+
+        bis.close();
+        ois.close();
 
         return ois.readObject();
     }

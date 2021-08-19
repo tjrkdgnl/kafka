@@ -1,8 +1,11 @@
 package consumer;
 
 
+import model.TopicPartition;
+
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 
 public class ConsumerManager {
     // consumerid-consumerClient
@@ -24,6 +27,11 @@ public class ConsumerManager {
         consumerMap.put(consumerId, consumer);
     }
 
+    public void assign(List<TopicPartition> topicPartitions, String consumerId) {
+        ConsumerClient consumer = consumerMap.get(consumerId);
+        consumer.assign(topicPartitions);
+    }
+
     public void subscribe(Collection<String> topics, String consumerId) {
         ConsumerClient consumer = consumerMap.get(consumerId);
         consumer.subscribe(topics);
@@ -36,6 +44,8 @@ public class ConsumerManager {
         if (!consumer.checkSubscription()) {
             throw new IllegalStateException("구독한 토픽이 존재하지 않습니다.");
         } else {
+            consumer.wakeUpHeartbeat();
+
             consumer.poll();
         }
     }

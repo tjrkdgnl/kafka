@@ -18,7 +18,7 @@ public class ConsumerMetadata {
     public ConsumerMetadata() {
         topicPartitionAndOffset = new HashMap<>();
         rebalanceId = 0;
-        status = MemberState.REBALANCING;
+        status = MemberState.JOIN;
     }
 
     public int getRebalanceId() {

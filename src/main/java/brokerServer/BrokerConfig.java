@@ -5,7 +5,7 @@ public enum BrokerConfig {
     ID("broker_id"),HOST("host"), PORT("port"),LOG_DIRS("log_dirs"),
     TOPIC_PARTITIONS("topic_partitions"),SEGMENT_BYTES("segrment_bytes"),
     AUTO_CREATE_TOPIC("auto_create_topics"),REPLICATION_FACTOR("replication_factor"),
-    IO_THREAD("num_io_thread");
+    IO_THREAD("num_io_thread"), HEARTBEAT_INTERVAL("heartbeat_interbal");
 
     private final String value;
 

@@ -7,9 +7,11 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import manager.NetworkManager;
+import model.TopicPartition;
 import org.apache.log4j.Logger;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Properties;
 
 public class KafkaConsumer {
@@ -41,7 +43,7 @@ public class KafkaConsumer {
 
         logger.info("host: " + host + " port: " + port);
 
-        Bootstrap bootstrap = NetworkManager.getInstance().createProducerClient(eventLoopGroup, host, port)
+        Bootstrap bootstrap = NetworkManager.getInstance().buildClient(eventLoopGroup, host, port)
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel socketChannel) {
@@ -56,20 +58,18 @@ public class KafkaConsumer {
         ConsumerManager.getInstance().addConsumer(consumerId, consumer);
     }
 
+    public void assign(List<TopicPartition> topicPartitions) {
+        ConsumerManager.getInstance().assign(topicPartitions, consumerId);
+    }
+
     public void subscribe(Collection<String> topics) {
         ConsumerManager.getInstance().subscribe(topics, consumerId);
     }
 
 
-    public void poll() {
-        try {
-            //join부터 update까지 테스트를 위한 sleep
-            Thread.sleep(4000);
-            ConsumerManager.getInstance().poll( consumerId);
+    public void poll() throws InterruptedException {
 
-        } catch (Exception e) {
-            logger.error("polling 중에 문제가 발생했습니다.", e);
-            System.exit(-1);
-        }
+        ConsumerManager.getInstance().poll(consumerId);
+        Thread.sleep(5000);
     }
 }

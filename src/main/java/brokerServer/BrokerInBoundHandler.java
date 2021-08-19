@@ -6,7 +6,8 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import model.AckData;
 import model.ProducerRecord;
 import model.Topic;
-import model.request.RequestPollingMessage;
+import model.request.RequestHeartbeat;
+import model.request.RequestMessage;
 import model.request.RequestTopicMetaData;
 import model.response.ResponseTopicMetadata;
 import org.apache.log4j.Logger;
@@ -18,7 +19,7 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
     private final Logger logger = Logger.getLogger(BrokerInBoundHandler.class);
     private final ProducerRecordHandler producerRecordHandler = new ProducerRecordHandler(BrokerServer.getProperties());
     private final ConsumerGroupHandler consumerGroupHandler = new ConsumerGroupHandler(BrokerServer.getProperties());
-
+    private final HeartbeatHandler heartbeatHandler = new HeartbeatHandler();
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -50,22 +51,14 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
                 //record를 작성한 후 client에게 전송한다
                 producerRecordHandler.init(ctx, record).saveProducerRecord();
 
-            } else if (obj instanceof RequestPollingMessage) {
-                RequestPollingMessage pollingMessage = (RequestPollingMessage) obj;
+            } else if (obj instanceof RequestMessage) {
+                RequestMessage message = (RequestMessage) obj;
+                consumerGroupHandler.checkConsumerGroup(ctx, message);
 
-                switch (pollingMessage.getStatus()) {
-                    case REBALANCING:
-                        consumerGroupHandler.joinConsumerGroup(ctx, pollingMessage);
-                        break;
+            } else if (obj instanceof RequestHeartbeat) {
+                RequestHeartbeat requestHeartbeat = (RequestHeartbeat) obj;
+                heartbeatHandler.checkHeartbeat(requestHeartbeat);
 
-                    case UPDATE:
-                        consumerGroupHandler.getConsumerGroup(ctx, pollingMessage);
-
-                    case STABLE:
-                        //RecordHandler를 이용해서 consumer에게 record전달
-                        break;
-
-                }
             } else {
                 ctx.channel().writeAndFlush(new AckData(400, ERROR.TYPE_ERROR +
                         ": 브로커에서 알 수 없는 type의 object를 받았습니다."));

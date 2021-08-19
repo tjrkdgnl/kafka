@@ -2,6 +2,6 @@ package util;
 
 public enum MemberState {
 
-    REBALANCING, STABLE, UPDATE
+    JOIN, STABLE, UPDATE, REMOVE
 
 }
