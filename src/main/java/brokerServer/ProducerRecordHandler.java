@@ -27,6 +27,7 @@ public class ProducerRecordHandler {
     private final Logger logger = Logger.getLogger(ProducerRecordHandler.class);
     private final String LOG = "log";
     private final String OFFSET = "offset";
+    private final String PARTITION = "partition";
     private final ExecutorService executorService;
     private final CompletableFuture<Object> offsetFuture;
     private final CompletableFuture<Object> recordsFuture;
@@ -45,7 +46,7 @@ public class ProducerRecordHandler {
     public ProducerRecordHandler(Properties properties) {
         int ioThread = Integer.parseInt(properties.getProperty(BrokerConfig.IO_THREAD.getValue()));
 
-        this.properties =properties;
+        this.properties = properties;
         executorService = Executors.newFixedThreadPool(ioThread);
         offsetFuture = new CompletableFuture<>();
         recordsFuture = new CompletableFuture<>();
@@ -62,7 +63,7 @@ public class ProducerRecordHandler {
         String brokerID = properties.getProperty(BrokerConfig.ID.getValue());
         Path defaultPath = Path.of(properties.getProperty(BrokerConfig.LOG_DIRS.getValue()));
 
-        topicPath = Path.of(defaultPath + "/" + "broker-" + brokerID + "/" + producerRecord.getTopic() + "/" + "partition" + producerRecord.getPartition());
+        topicPath = Path.of(defaultPath + "/" + "broker-" + brokerID + "/" + producerRecord.getTopic() + "/" + PARTITION + producerRecord.getPartition());
         defaultLogPath = Path.of(topicPath + "/" + LOG + "_");
         defaultOffsetPath = Path.of(topicPath + "/" + OFFSET + "_");
 

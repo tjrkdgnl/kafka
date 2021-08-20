@@ -1,8 +1,10 @@
 package consumer;
 
 
+import model.ConsumerRecord;
 import model.TopicPartition;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -10,9 +12,13 @@ import java.util.List;
 public class ConsumerManager {
     // consumerid-consumerClient
     private final HashMap<String, ConsumerClient> consumerMap;
+    //consumerId-List<ConsumerRecord>
+    private final HashMap<String, List<ConsumerRecord>> consumerRecordsMap;
+
 
     public ConsumerManager() {
         consumerMap = new HashMap<>();
+        consumerRecordsMap = new HashMap<>();
     }
 
     public static ConsumerManager getInstance() {
@@ -51,7 +57,16 @@ public class ConsumerManager {
     }
 
 
+    public void setConsumerRecords(String consumerId, List<ConsumerRecord> consumerRecords) {
+        consumerRecordsMap.put(consumerId, consumerRecords);
+    }
+
+    public List<ConsumerRecord> getConsumerRecord(String consumerId) {
+        return consumerRecordsMap.containsKey(consumerId) ? consumerRecordsMap.remove(consumerId) : new ArrayList<>();
+    }
+
     private static class SingletonConsumerManager {
         private static final ConsumerManager INSTANCE = new ConsumerManager();
     }
+
 }

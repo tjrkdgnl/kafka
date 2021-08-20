@@ -7,6 +7,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import manager.NetworkManager;
+import model.ConsumerRecord;
 import model.TopicPartition;
 import org.apache.log4j.Logger;
 
@@ -19,6 +20,7 @@ public class KafkaConsumer {
     private Properties properties;
     private String groupId;
     private String consumerId;
+    private ChannelFuture channelFuture;
 
     public KafkaConsumer(Properties properties) {
 
@@ -52,7 +54,7 @@ public class KafkaConsumer {
                     }
                 });
 
-        ChannelFuture channelFuture = bootstrap.connect().sync();
+        channelFuture = bootstrap.connect().sync();
 
         ConsumerClient consumer = new ConsumerClient(properties, channelFuture, groupId, consumerId);
         ConsumerManager.getInstance().addConsumer(consumerId, consumer);
@@ -66,10 +68,22 @@ public class KafkaConsumer {
         ConsumerManager.getInstance().subscribe(topics, consumerId);
     }
 
+    public void close() {
+        try {
+            channelFuture.channel().closeFuture().sync();
+        } catch (InterruptedException e) {
+            logger.info("컨슈머를 종료하는데 문제가 발생했습니다.", e);
+        }
+    }
 
-    public void poll() throws InterruptedException {
+    public List<ConsumerRecord> poll() throws Exception {
 
         ConsumerManager.getInstance().poll(consumerId);
-        Thread.sleep(5000);
+
+        Thread.sleep(4000);
+
+        return ConsumerManager.getInstance().getConsumerRecord(consumerId);
     }
+
 }
+

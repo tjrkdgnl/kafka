@@ -39,7 +39,7 @@ public class TopicMetadataHandler extends AvroSerializers {
     }
 
     //broker server가 실행되자마자 호출
-    public void getTopicMetaData() throws Exception {
+    public void getTopicMetaData(BrokerServer.TopicsListener topicsListener) throws Exception {
         Path path = Path.of(defaultPath + "/" + TOPIC_LIST);
 
         if (!Files.exists(path)) {
@@ -62,7 +62,8 @@ public class TopicMetadataHandler extends AvroSerializers {
                 Schema schema = ReflectData.get().getSchema(Topics.class);
 
                 try {
-                    BrokerServer.topics = (Topics) getDeserialization(buffer.array(), schema);
+                    Topics topics = (Topics) getDeserialization(buffer.array(), schema);
+                    topicsListener.setTopics(topics);
 
                     logger.info("topic info: " + BrokerServer.topics);
 

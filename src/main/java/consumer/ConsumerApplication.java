@@ -1,13 +1,14 @@
 package consumer;
 
-import model.TopicPartition;
+import model.ConsumerRecord;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
 
 public class ConsumerApplication {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
 
         Properties properties = new Properties();
 
@@ -20,12 +21,21 @@ public class ConsumerApplication {
 
         KafkaConsumer kafkaConsumer = new KafkaConsumer(properties);
 
-        kafkaConsumer.assign(Arrays.asList(new TopicPartition("group", 1)));
-
         kafkaConsumer.subscribe(Arrays.asList("test"));
 
-        while (true) {
-            kafkaConsumer.poll();
+        try {
+            while (true) {
+                List<ConsumerRecord> consumerRecords = kafkaConsumer.poll();
+
+                for (ConsumerRecord consumerRecord : consumerRecords) {
+                    System.out.printf("Topic: %s, Partition: %d, Offset: %d, Value: %s\n", consumerRecord.getTopicPartition().getTopic(),
+                            consumerRecord.getTopicPartition().getPartition(), consumerRecord.getOffset(), consumerRecord.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            kafkaConsumer.close();
         }
     }
 }

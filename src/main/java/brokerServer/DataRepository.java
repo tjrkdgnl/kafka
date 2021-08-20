@@ -1,5 +1,7 @@
 package brokerServer;
 
+import model.ConsumerOffsetInfo;
+import model.Record;
 import model.request.RequestHeartbeat;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
@@ -12,16 +14,45 @@ public class DataRepository {
     private final Set<String> rebalancingGroup;
     //consumer-heartbeat
     private final HashMap<String, RequestHeartbeat> consumerHeartbeat;
-
+    //ConsumerTopicInfo-offset
+    private final HashMap<ConsumerOffsetInfo, Integer> consumersOffsetMap;
+    //topic-records
+    private final HashMap<String, List<Record>> recordsMap;
 
     public DataRepository() {
         this.groups = new HashMap<>();
         this.consumerHeartbeat = new HashMap<>();
         this.rebalancingGroup = new HashSet<>();
+        this.consumersOffsetMap = new HashMap<>();
+        this.recordsMap = new HashMap<>();
     }
 
     public static DataRepository getInstance() {
         return SingletonRepo.INSTANCE;
+    }
+
+    public HashMap<ConsumerOffsetInfo, Integer> getConsumerOffsetMap() {
+        return new HashMap<>(consumersOffsetMap);
+    }
+
+    public void updateConsumersOffsetMap(HashMap<ConsumerOffsetInfo, Integer> consumersOffsetMap) {
+        this.consumersOffsetMap.putAll(consumersOffsetMap);
+    }
+
+    public void addConsumerOffset(ConsumerOffsetInfo offsetInfo,int offset){
+        consumersOffsetMap.put(offsetInfo,offset);
+    }
+
+    public void removeConsumerOffset(ConsumerOffsetInfo offsetInfo){
+        consumersOffsetMap.remove(offsetInfo);
+    }
+
+    public void setRecords(String topic, List<Record> records) {
+        recordsMap.put(topic, records);
+    }
+
+    public List<Record> getRecords(String topic) {
+        return recordsMap.get(topic);
     }
 
     public List<String> getConsumers(String groupId) {
@@ -40,10 +71,6 @@ public class DataRepository {
         rebalancingGroup.remove(groupId);
     }
 
-    public HashMap<String, RequestHeartbeat> getConsumerHeartbeat() {
-        return new HashMap<>(consumerHeartbeat);
-    }
-
     public void joinTheGroup(String groupId, String consumerId) {
         List<String> consumers = groups.getOrDefault(groupId, new ArrayList<>());
 
@@ -60,7 +87,11 @@ public class DataRepository {
         groups.put(groupId, consumers);
     }
 
-    public void removeHeartbeat(String consumerId){
+    public HashMap<String, RequestHeartbeat> getConsumerHeartbeat() {
+        return new HashMap<>(consumerHeartbeat);
+    }
+
+    public void removeHeartbeat(String consumerId) {
         consumerHeartbeat.remove(consumerId);
     }
 

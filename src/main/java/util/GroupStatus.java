@@ -1,5 +1,5 @@
 package util;
 
 public enum GroupStatus {
-    UPDATE, COMPLETE, PREPARE
+    UPDATE, COMPLETE, PREPARE, STABLE
 }

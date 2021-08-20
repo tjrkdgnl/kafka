@@ -9,7 +9,11 @@ public class ConsumerOutBoundHandler extends ChannelOutboundHandlerAdapter {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        ctx.writeAndFlush(DataUtil.parsingObjectToByteBuf(msg));
+        try {
+            ctx.writeAndFlush(DataUtil.parsingObjectToByteBuf(msg));
+        } catch (Exception e){
+            System.out.println(e);
+        }
     }
 
     @Override

@@ -4,6 +4,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import manager.NetworkManager;
+import model.Topic;
 import model.Topics;
 import org.apache.log4j.Logger;
 
@@ -26,9 +27,29 @@ public class BrokerServer {
         this.host = properties.getProperty(BrokerConfig.HOST.getValue());
         this.port = Integer.parseInt(properties.getProperty(BrokerConfig.PORT.getValue()));
         this.executorService = Executors.newScheduledThreadPool(1);
+        ConsumerGroupOffsetHandler consumerGroupOffsetHandler = new ConsumerGroupOffsetHandler(properties);
+        ConsumerRecordsHandler consumerRecordsHandler = new ConsumerRecordsHandler(properties);
+
+
+        consumerGroupOffsetHandler.readConsumersOffset(consumersOffset -> {
+            if (consumersOffset != null) {
+                DataRepository.getInstance().updateConsumersOffsetMap(consumersOffset.getConsumerOffsetMap());
+                logger.info("set Consumer__offsets :" + DataRepository.getInstance().getConsumerOffsetMap());
+            }
+        });
 
         //broker server가 실행되면 topic list 정보를 얻어온다
-        BrokerRepository.TOPIC_METADATA_HANDLER.getTopicMetaData();
+        BrokerRepository.TOPIC_METADATA_HANDLER.getTopicMetaData(topics -> {
+            BrokerServer.topics = topics;
+
+            //모든 레코드들을 불러와서 레포지토리에 셋팅한다
+            for (Topic topic : topics.getTopicList()) {
+                consumerRecordsHandler.readRecords(topic.getTopic(), records -> {
+                    DataRepository.getInstance().setRecords(topic.getTopic(), records);
+                    logger.info("set Records :"+ DataRepository.getInstance().getRecords(topic.getTopic()));
+                });
+            }
+        });
     }
 
     public void start() {
@@ -62,5 +83,10 @@ public class BrokerServer {
         private static final TopicMetadataHandler TOPIC_METADATA_HANDLER = new TopicMetadataHandler(PROPERTIES);
     }
 
+    @FunctionalInterface
+    public interface TopicsListener {
+        void setTopics(Topics topics);
+    }
 
 }
+

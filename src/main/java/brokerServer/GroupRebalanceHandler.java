@@ -1,23 +1,24 @@
 package brokerServer;
 
-import model.ConsumerGroup;
-import model.Topic;
-import model.TopicPartition;
-import model.Topics;
+import model.*;
 import model.request.RequestMessage;
 import org.apache.log4j.Logger;
 import util.RebalanceState;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class GroupRebalanceHandler {
     private final Logger logger;
+    private final ConsumerGroupOffsetHandler consumerGroupOffsetHandler;
+    private final DataRepository dataRepository;
 
     GroupRebalanceHandler() {
         this.logger = Logger.getLogger(GroupRebalanceHandler.class);
+        this.consumerGroupOffsetHandler = new ConsumerGroupOffsetHandler(BrokerServer.getProperties());
+        dataRepository = DataRepository.getInstance();
     }
 
 
@@ -78,6 +79,8 @@ public class GroupRebalanceHandler {
                                 continue;
                             }
 
+                            updateOffsetInfo(topicPartition, consumerGroup.getGroupId(), consumersInGroup.get(consumerIdx));
+
                             //consumer와 토픽의 파티션을 맵핑하고 저장한다
                             consumerGroup.addOwnership(consumersInGroup.get(consumerIdx++), topicPartition);
 
@@ -90,6 +93,7 @@ public class GroupRebalanceHandler {
                 }
             }
 
+
             listener.setResult(RebalanceState.SUCCESS);
 
         } catch (Exception e) {
@@ -98,7 +102,7 @@ public class GroupRebalanceHandler {
         }
     }
 
-    public void runRebalanceForRemoving(File file, ConsumerGroup consumerGroup,RebalanceCallbackListener listener) throws Exception {
+    public void runRebalanceForRemoving(ConsumerGroup consumerGroup, RebalanceCallbackListener listener) throws Exception {
         try {
             //consumer들이 구독한 토픽들을 가져온다
             Set<String> subscriptionTopics = consumerGroup.getTopicMap().keySet();
@@ -109,7 +113,7 @@ public class GroupRebalanceHandler {
             List<String> runningConsumers = DataRepository.getInstance().getConsumers(consumerGroup.getGroupId());
             logger.info(runningConsumers);
 
-            //제거될 컨슈머들
+            //컨슈머 제거
             runningConsumers.forEach(consumersOutGroup::remove);
 
             List<TopicPartition> remainingTopicPartitions = new ArrayList<>();
@@ -128,14 +132,20 @@ public class GroupRebalanceHandler {
             int consumerIdx = 0;
             List<String> currentConsumers = new ArrayList<>(consumerGroup.getOwnershipMap().keySet());
 
-            for (TopicPartition topicPartition : remainingTopicPartitions) {
-                consumerGroup.addOwnership(currentConsumers.get(consumerIdx++), topicPartition);
+            for (TopicPartition removedTopicPartition : remainingTopicPartitions) {
+                //ownerShip을 넘겨받는 consumer로 OffsetInfo를 변경시켜준다
+                updateOffsetInfo(removedTopicPartition, consumerGroup.getGroupId(), currentConsumers.get(consumerIdx));
+
+                //ownerShip 변경
+                consumerGroup.addOwnership(currentConsumers.get(consumerIdx++), removedTopicPartition);
 
                 if (consumerIdx >= currentConsumers.size()) {
                     consumerIdx = 0;
                 }
             }
 
+            //파일로 작성하여 저장한다
+            consumerGroupOffsetHandler.updateConsumerOffset();
             consumerGroup.setRebalanceId(consumerGroup.getRebalanceId() + 1);
             listener.setResult(RebalanceState.SUCCESS);
 
@@ -143,6 +153,30 @@ public class GroupRebalanceHandler {
             logger.error("파티션 분배를 진행 중에 문제가 발생했습니다.", e);
             listener.setResult(RebalanceState.FAIL);
         }
+    }
+
+    public void updateOffsetInfo(TopicPartition movedTopicPartition, String groupId, String runningConsumer) {
+        ConsumerOffsetInfo newOffsetInfo = new ConsumerOffsetInfo(groupId, runningConsumer, movedTopicPartition);
+
+        if (dataRepository.getConsumerOffsetMap().size() != 0) {
+            consumerGroupOffsetHandler.readConsumersOffset(consumersOffset -> {
+                if(consumersOffset !=null){
+                    dataRepository.updateConsumersOffsetMap(consumersOffset.getConsumerOffsetMap());
+
+                    //현재 저장된 offsetInfo를 불러온다
+                    for (Map.Entry<ConsumerOffsetInfo, Integer> offsetInfo : dataRepository.getConsumerOffsetMap().entrySet()) {
+                        if (offsetInfo.getKey().getTopicPartition().equals(movedTopicPartition)) {
+                            ConsumerOffsetInfo removedOffsetInfo = offsetInfo.getKey();
+                            dataRepository.addConsumerOffset(newOffsetInfo, offsetInfo.getValue());
+                            dataRepository.removeConsumerOffset(removedOffsetInfo);
+                            return;
+                        }
+                    }
+                }
+            });
+        }
+        dataRepository.addConsumerOffset(newOffsetInfo, 1);
+        consumerGroupOffsetHandler.updateConsumerOffset();
     }
 
 

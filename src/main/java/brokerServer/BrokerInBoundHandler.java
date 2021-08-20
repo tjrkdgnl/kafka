@@ -6,6 +6,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import model.AckData;
 import model.ProducerRecord;
 import model.Topic;
+import model.request.RequestCommit;
 import model.request.RequestHeartbeat;
 import model.request.RequestMessage;
 import model.request.RequestTopicMetaData;
@@ -20,6 +21,8 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
     private final ProducerRecordHandler producerRecordHandler = new ProducerRecordHandler(BrokerServer.getProperties());
     private final ConsumerGroupHandler consumerGroupHandler = new ConsumerGroupHandler(BrokerServer.getProperties());
     private final HeartbeatHandler heartbeatHandler = new HeartbeatHandler();
+    private final ConsumerGroupOffsetHandler consumerGroupOffsetHandler = new ConsumerGroupOffsetHandler(BrokerServer.getProperties());
+
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -58,6 +61,10 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
             } else if (obj instanceof RequestHeartbeat) {
                 RequestHeartbeat requestHeartbeat = (RequestHeartbeat) obj;
                 heartbeatHandler.checkHeartbeat(requestHeartbeat);
+
+            } else if (obj instanceof RequestCommit) {
+                RequestCommit commit = (RequestCommit) obj;
+                consumerGroupOffsetHandler.changeConsumerOffset(commit, ctx);
 
             } else {
                 ctx.channel().writeAndFlush(new AckData(400, ERROR.TYPE_ERROR +

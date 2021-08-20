@@ -1,8 +1,9 @@
 package brokerServer;
 
 import io.netty.channel.ChannelHandlerContext;
-import model.ConsumerGroup;
+import model.*;
 import model.request.RequestMessage;
+import model.response.ResponseConsumerRecords;
 import model.response.UpdateGroupInfo;
 import org.apache.avro.Schema;
 import org.apache.avro.reflect.ReflectData;
@@ -20,8 +21,7 @@ import java.nio.channels.CompletionHandler;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.EnumSet;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -33,6 +33,7 @@ public class ConsumerGroupHandler {
     private final ExecutorService executorService;
     private final Schema consumerGroupSchema;
     private final GroupRebalanceHandler groupRebalanceHandler;
+    private final DataRepository dataRepository;
 
     public ConsumerGroupHandler(Properties properties) {
         this.logger = Logger.getLogger(ConsumerGroupHandler.class);
@@ -43,6 +44,7 @@ public class ConsumerGroupHandler {
         executorService = Executors.newFixedThreadPool(ioThread);
         consumerGroupSchema = ReflectData.get().getSchema(ConsumerGroup.class);
         groupRebalanceHandler = new GroupRebalanceHandler();
+        dataRepository = DataRepository.getInstance();
     }
 
     public void checkConsumerGroup(ChannelHandlerContext ctx, RequestMessage message) {
@@ -79,7 +81,7 @@ public class ConsumerGroupHandler {
                 }
 
                 try {
-                    processTheResults(file, ctx, message, byteBuffer.array());
+                    processTheResult(file, ctx, message, byteBuffer.array());
                 } catch (Exception e) {
                     logger.error("consumer group 처리 중 문제가 발생했습니다. ", e);
                 }
@@ -112,7 +114,7 @@ public class ConsumerGroupHandler {
         if (message.getStatus() == MemberState.JOIN)
             groupRebalanceHandler.runRebalance(consumerGroup, message, listener);
         else if (message.getStatus() == MemberState.REMOVE) {
-            groupRebalanceHandler.runRebalanceForRemoving(file, consumerGroup, listener);
+            groupRebalanceHandler.runRebalanceForRemoving(consumerGroup, listener);
         }
     }
 
@@ -153,7 +155,7 @@ public class ConsumerGroupHandler {
     }
 
 
-    private void processTheResults(File file, ChannelHandlerContext ctx, RequestMessage message, byte[] bytes) throws Exception {
+    private void processTheResult(File file, ChannelHandlerContext ctx, RequestMessage message, byte[] bytes) throws Exception {
         switch (message.getStatus()) {
             case JOIN:
                 try {
@@ -199,16 +201,40 @@ public class ConsumerGroupHandler {
             case STABLE:
                 ConsumerGroup consumerGroup = (ConsumerGroup) avroSerializers.getDeserialization(bytes, consumerGroupSchema);
 
-                //file로 관리되고 있는 consumer Group에 변화가 생겼다면 컨슈머에게 update 요청을 보낸다
                 if (consumerGroup.getRebalanceId() > message.getRebalanceId()) {
+                    //file로 관리되고 있는 consumer Group에 변화가 생겼다면 컨슈머에게 update 요청을 보낸다
                     ctx.channel().writeAndFlush(new UpdateGroupInfo(GroupStatus.UPDATE, message.getConsumerId()));
                 } else {
-                    //message 전송 하는 로직 구현
+                    //컨슈머와 맵핑된 TopicPartitions
+                    List<TopicPartition> topicPartitions = consumerGroup.getOwnershipMap().get(message.getConsumerId());
+
+                    //컨슈머에게 전송할 consumerRecords
+                    List<ConsumerRecord> consumerRecords = new ArrayList<>();
+
+                    for (TopicPartition topicPartition : topicPartitions) {
+                        //offset metadata를 불러오기 위해서 topicInfo key를 생성하여 offset value를 얻어온다
+                        ConsumerOffsetInfo consumerOffsetInfo = new ConsumerOffsetInfo(message.getGroupId(), message.getConsumerId(), topicPartition);
+
+                        int offset = dataRepository.getConsumerOffsetMap().get(consumerOffsetInfo);
+
+                        //현재 브로커 서버에서 관리되고 있는 레코드를 불러온다
+                        List<Record> records = DataRepository.getInstance().getRecords(topicPartition.getTopic());
+
+                        for (Record record : records) {
+                            if (topicPartition.getPartition() != record.getPartition()) continue;
+
+                            ConsumerRecord consumerRecord = new ConsumerRecord(topicPartition, record.getOffset(), record.getMessage());
+
+                            if (offset == record.getOffset() && !consumerRecords.contains(consumerRecord)) {
+                                consumerRecords.add(consumerRecord);
+                            }
+                        }
+                    }
+                    ctx.channel().writeAndFlush(new ResponseConsumerRecords(message.getGroupId(), message.getConsumerId(), consumerRecords));
                 }
                 break;
         }
     }
-
 
     private void closeAsyncChannel(AsynchronousFileChannel asynchronousFileChannel) {
         if (asynchronousFileChannel != null && asynchronousFileChannel.isOpen()) {

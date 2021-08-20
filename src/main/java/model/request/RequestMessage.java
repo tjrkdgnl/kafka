@@ -12,6 +12,7 @@ public class RequestMessage extends StatusHeader implements Serializable {
     private List<TopicPartition> subscriptions;
     private String consumerId;
     private String groupId;
+    private int recordSize = 1;
 
     public RequestMessage(MemberState status, String groupId) {
         super(status);
@@ -29,6 +30,9 @@ public class RequestMessage extends StatusHeader implements Serializable {
         this.subscriptions = subscriptions;
     }
 
+    public int getRecordSize() {
+        return recordSize;
+    }
 
     public int getRebalanceId() {
         return rebalanceId;

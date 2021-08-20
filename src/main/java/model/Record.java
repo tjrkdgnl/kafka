@@ -3,6 +3,7 @@ package model;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 
 /**
@@ -50,6 +51,19 @@ public class Record implements Serializable {
     public int size(){
         //8은 총 partition, offset 두 int 타입의 합
         return topic.length()+message.length()+ 8;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Record record = (Record) o;
+        return partition == record.partition && offset == record.offset && Objects.equals(topic, record.topic) && Objects.equals(message, record.message);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(topic, message, partition, offset);
     }
 
     @Override

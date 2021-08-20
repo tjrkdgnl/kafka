@@ -9,7 +9,7 @@ import java.util.Objects;
 public class TopicPartition implements Serializable {
     private String topic;
     private int partition;
-    private int hash;
+
 
     public TopicPartition() {
 
@@ -30,33 +30,17 @@ public class TopicPartition implements Serializable {
 
 
     @Override
-    public int hashCode() {
-        if (this.hash != 0) {
-            return this.hash;
-        } else {
-            int result = 1;
-            result = 31 * result + this.partition;
-            result = 31 * result + Objects.hashCode(this.topic);
-            this.hash = result;
-            return result;
-        }
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        TopicPartition that = (TopicPartition) o;
+        return partition == that.partition && Objects.equals(topic, that.topic);
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        } else if (obj == null) {
-            return false;
-        } else if (this.getClass() != obj.getClass()) {
-            return false;
-        } else {
-            TopicPartition topicPartition = (TopicPartition) obj;
-
-            return partition == topicPartition.partition && Objects.equals(topic, topicPartition.topic);
-        }
+    public int hashCode() {
+        return Objects.hash(topic, partition);
     }
-
 
     @Override
     public String toString() {
