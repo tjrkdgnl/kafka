@@ -16,9 +16,9 @@ public class ConsumerGroup implements Serializable {
     //member가 갖고 있는 topic list
     private HashMap<String, List<TopicPartition>> ownershipMap;
     //topic을 구독하고 있는 consumer list
-    private final HashMap<String, List<String>> topicMap;
+    private HashMap<String, List<String>> topicMap;
     //컨슈머로부터 직접 할당된 topicPartition
-    private final HashMap<String, List<TopicPartition>> assignedOwnershipMap;
+    private HashMap<String, List<TopicPartition>> assignedOwnershipMap;
 
 
     public ConsumerGroup() {
@@ -35,6 +35,16 @@ public class ConsumerGroup implements Serializable {
             }
         }
         return false;
+    }
+
+    public void clear() {
+        ownershipMap.clear();
+        topicMap.clear();
+        assignedOwnershipMap.clear();
+
+        ownershipMap = new HashMap<>();
+        topicMap = new HashMap<>();
+        assignedOwnershipMap = new HashMap<>();
     }
 
     public void addAssignedTopicPartition(String consumerId, TopicPartition topicPartition) {

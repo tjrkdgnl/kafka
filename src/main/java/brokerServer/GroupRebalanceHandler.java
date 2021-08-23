@@ -133,6 +133,11 @@ public class GroupRebalanceHandler {
             List<String> currentConsumers = new ArrayList<>(consumerGroup.getOwnershipMap().keySet());
 
             for (TopicPartition removedTopicPartition : remainingTopicPartitions) {
+                if (currentConsumers.size() == 0) {
+                    //컨슈머 그룹내에 컨슈머가 존재하지 않는다면 그룹 내의 정보를 초기화한다
+                    consumerGroup.clear();
+                    break;
+                }
                 //ownerShip을 넘겨받는 consumer로 OffsetInfo를 변경시켜준다
                 updateOffsetInfo(removedTopicPartition, consumerGroup.getGroupId(), currentConsumers.get(consumerIdx));
 
