@@ -16,7 +16,6 @@ import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Properties;
@@ -55,7 +54,7 @@ public class ConsumerRecordsHandler {
                 try {
                     readProdcerRecord(logNumber, logPath, recordListener);
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    logger.info("records를 읽던 중 문제가 발생했습니다. ", e);
                 }
             }
         });

@@ -21,10 +21,12 @@ public class KafkaConsumer {
     private String groupId;
     private String consumerId;
     private ChannelFuture channelFuture;
+    private int maxPollInterval;
 
     public KafkaConsumer(Properties properties) {
 
         try {
+            maxPollInterval = Integer.parseInt(properties.getProperty(ConsumerConfig.MAX_POLL_INTERVAL.name(), "4000"));
             groupId = properties.getProperty(ConsumerConfig.GROUP_ID.name());
             consumerId = properties.getProperty(ConsumerConfig.CONSUMER_ID.name());
             this.properties = properties;
@@ -76,11 +78,11 @@ public class KafkaConsumer {
         }
     }
 
-    public List<ConsumerRecord> poll(int timeOut) throws Exception {
+    public List<ConsumerRecord> poll() throws Exception {
 
         ConsumerManager.getInstance().poll(consumerId);
 
-        Thread.sleep(timeOut);
+        Thread.sleep(maxPollInterval);
 
         return ConsumerManager.getInstance().getConsumerRecord(consumerId);
     }
