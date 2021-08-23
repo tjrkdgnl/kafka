@@ -33,7 +33,7 @@ public class ConsumerRecordInBoundHandler extends ChannelInboundHandlerAdapter {
                             resConsumerRecords.getConsumerId(), consumerRecord.getTopicPartition());
 
                     //갱신 요청할 topicInfo만 저장한다
-                    unCommitedOffset.put(topicInfo, consumer.getOffset(consumerRecord.getTopicPartition()) + 1);
+                    unCommitedOffset.put(topicInfo, consumerRecord.getOffset() + 1);
                 }
 
                 //커밋되지 않은 offsetinfo 저장

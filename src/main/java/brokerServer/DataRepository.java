@@ -1,34 +1,48 @@
 package brokerServer;
 
-import model.ConsumerOffsetInfo;
-import model.Record;
+import model.*;
 import model.request.RequestHeartbeat;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DataRepository {
-
-    private final HashMap<String, List<String>> groups;
+    private Topics topics;
+    private final ConcurrentHashMap<String, List<String>> groups;
     private final Set<String> rebalancingGroup;
     //consumer-heartbeat
-    private final HashMap<String, RequestHeartbeat> consumerHeartbeat;
+    private final ConcurrentHashMap<String, RequestHeartbeat> consumerHeartbeat;
     //ConsumerTopicInfo-offset
-    private final HashMap<ConsumerOffsetInfo, Integer> consumersOffsetMap;
+    private final ConcurrentHashMap<ConsumerOffsetInfo, Integer> consumersOffsetMap;
     //topic-records
-    private final HashMap<String, List<Record>> recordsMap;
+    private final ConcurrentHashMap<TopicPartition, List<Record>> recordsMap;
+
 
     public DataRepository() {
-        this.groups = new HashMap<>();
-        this.consumerHeartbeat = new HashMap<>();
+        this.topics = new Topics();
+        this.groups = new ConcurrentHashMap<>();
+        this.consumerHeartbeat = new ConcurrentHashMap<>();
         this.rebalancingGroup = new HashSet<>();
-        this.consumersOffsetMap = new HashMap<>();
-        this.recordsMap = new HashMap<>();
+        this.consumersOffsetMap = new ConcurrentHashMap<>();
+        this.recordsMap = new ConcurrentHashMap<>();
     }
 
     public static DataRepository getInstance() {
         return SingletonRepo.INSTANCE;
+    }
+
+    public void setTopics(Topics topics) {
+        this.topics = topics;
+    }
+
+    public void addTopic(Topic topic) {
+        this.topics.getTopicList().add(topic);
+    }
+
+    public Topics getTopics() {
+        return new Topics(topics.getTopicList());
     }
 
     public HashMap<ConsumerOffsetInfo, Integer> getConsumerOffsetMap() {
@@ -39,20 +53,20 @@ public class DataRepository {
         this.consumersOffsetMap.putAll(consumersOffsetMap);
     }
 
-    public void addConsumerOffset(ConsumerOffsetInfo offsetInfo,int offset){
-        consumersOffsetMap.put(offsetInfo,offset);
+    public void addConsumerOffset(ConsumerOffsetInfo offsetInfo, int offset) {
+        consumersOffsetMap.put(offsetInfo, offset);
     }
 
-    public void removeConsumerOffset(ConsumerOffsetInfo offsetInfo){
+    public void removeConsumerOffset(ConsumerOffsetInfo offsetInfo) {
         consumersOffsetMap.remove(offsetInfo);
     }
 
-    public void setRecords(String topic, List<Record> records) {
-        recordsMap.put(topic, records);
+    public void setRecords(TopicPartition topicPartition, List<Record> records) {
+        recordsMap.put(topicPartition, records);
     }
 
-    public List<Record> getRecords(String topic) {
-        return recordsMap.get(topic);
+    public List<Record> getRecords(TopicPartition topicPartition) {
+        return new ArrayList<>(recordsMap.get(topicPartition));
     }
 
     public List<String> getConsumers(String groupId) {

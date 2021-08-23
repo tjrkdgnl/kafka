@@ -30,6 +30,11 @@ public class RequestMessage extends StatusHeader implements Serializable {
         this.subscriptions = subscriptions;
     }
 
+    public RequestMessage(MemberState status, int rebalanceId, List<TopicPartition> subscriptions, String consumerId, String groupId, int recordSize) {
+        this(status, rebalanceId, subscriptions, consumerId, groupId);
+        this.recordSize = recordSize;
+    }
+
     public int getRecordSize() {
         return recordSize;
     }

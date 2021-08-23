@@ -50,9 +50,10 @@ public class ConsumerRecordClient {
         channelFuture = bootstrap.connect().sync();
     }
 
-    public void requestConsumerRecords(MemberState status, int rebalanceId, List<TopicPartition> subscriptions, String consumerId, String groupId) {
+    public void requestConsumerRecords(MemberState status, int rebalanceId, List<TopicPartition> subscriptions,
+                                       String consumerId, String groupId, int recordSize) {
         channelFuture.channel().writeAndFlush(new RequestMessage(status, rebalanceId,
-                subscriptions, consumerId, groupId));
+                subscriptions, consumerId, groupId, recordSize));
     }
 
 

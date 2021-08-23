@@ -46,7 +46,7 @@ public class GroupRebalanceHandler {
             Set<String> subscriptionTopics = consumerGroup.getTopicMap().keySet();
 
             //현재 broker에서 관리하고있는 topic list
-            Topics topics = BrokerServer.topics;
+            Topics topics = dataRepository.getTopics();
 
             //현재 맵핑관계를 초기화시킨다
             consumerGroup.initOwnership();
@@ -160,11 +160,9 @@ public class GroupRebalanceHandler {
 
         if (dataRepository.getConsumerOffsetMap().size() != 0) {
             consumerGroupOffsetHandler.readConsumersOffset(consumersOffset -> {
-                if(consumersOffset !=null){
-                    dataRepository.updateConsumersOffsetMap(consumersOffset.getConsumerOffsetMap());
-
+                if (consumersOffset != null) {
                     //현재 저장된 offsetInfo를 불러온다
-                    for (Map.Entry<ConsumerOffsetInfo, Integer> offsetInfo : dataRepository.getConsumerOffsetMap().entrySet()) {
+                    for (Map.Entry<ConsumerOffsetInfo, Integer> offsetInfo : consumersOffset.getConsumerOffsetMap().entrySet()) {
                         if (offsetInfo.getKey().getTopicPartition().equals(movedTopicPartition)) {
                             ConsumerOffsetInfo removedOffsetInfo = offsetInfo.getKey();
                             dataRepository.addConsumerOffset(newOffsetInfo, offsetInfo.getValue());
@@ -175,7 +173,6 @@ public class GroupRebalanceHandler {
                 }
             });
         }
-        dataRepository.addConsumerOffset(newOffsetInfo, 1);
         consumerGroupOffsetHandler.updateConsumerOffset();
     }
 

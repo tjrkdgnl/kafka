@@ -5,6 +5,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import manager.NetworkManager;
 import model.Topic;
+import model.TopicPartition;
 import model.Topics;
 import org.apache.log4j.Logger;
 
@@ -18,7 +19,6 @@ public class BrokerServer {
     private final String host;
     private final int port;
     private static Properties properties;
-    public static Topics topics;
     private final ScheduledExecutorService executorService;
 
     public BrokerServer(Properties brokerProperties) throws Exception {
@@ -29,7 +29,7 @@ public class BrokerServer {
         this.executorService = Executors.newScheduledThreadPool(1);
         ConsumerGroupOffsetHandler consumerGroupOffsetHandler = new ConsumerGroupOffsetHandler(properties);
         ConsumerRecordsHandler consumerRecordsHandler = new ConsumerRecordsHandler(properties);
-
+        TopicMetadataHandler topicMetadataHandler = new TopicMetadataHandler(brokerProperties);
 
         consumerGroupOffsetHandler.readConsumersOffset(consumersOffset -> {
             if (consumersOffset != null) {
@@ -39,15 +39,19 @@ public class BrokerServer {
         });
 
         //broker server가 실행되면 topic list 정보를 얻어온다
-        BrokerRepository.TOPIC_METADATA_HANDLER.getTopicMetaData(topics -> {
-            BrokerServer.topics = topics;
+        topicMetadataHandler.getTopicMetaData(topics -> {
+            DataRepository.getInstance().setTopics(topics);
 
             //모든 레코드들을 불러와서 레포지토리에 셋팅한다
             for (Topic topic : topics.getTopicList()) {
-                consumerRecordsHandler.readRecords(topic.getTopic(), records -> {
-                    DataRepository.getInstance().setRecords(topic.getTopic(), records);
-                    logger.info("set Records :"+ DataRepository.getInstance().getRecords(topic.getTopic()));
-                });
+                for (int partition = 0; partition < topic.getPartitions(); partition++) {
+                    TopicPartition topicPartition = new TopicPartition(topic.getTopic(), partition);
+
+                    consumerRecordsHandler.readRecords(topicPartition, records -> {
+                        DataRepository.getInstance().setRecords(topicPartition, records);
+                        logger.info("set Records :" + DataRepository.getInstance().getRecords(topicPartition));
+                    });
+                }
             }
         });
     }
@@ -70,17 +74,12 @@ public class BrokerServer {
         }
     }
 
-    public static TopicMetadataHandler getTopicMetadataHandler() {
-        return BrokerRepository.TOPIC_METADATA_HANDLER;
-    }
-
     public static Properties getProperties() {
         return BrokerRepository.PROPERTIES;
     }
 
     private static class BrokerRepository {
         private static final Properties PROPERTIES = BrokerServer.properties;
-        private static final TopicMetadataHandler TOPIC_METADATA_HANDLER = new TopicMetadataHandler(PROPERTIES);
     }
 
     @FunctionalInterface

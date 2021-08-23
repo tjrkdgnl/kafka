@@ -29,8 +29,8 @@ public class HeartbeatClient {
         executorService = Executors.newScheduledThreadPool(1);
         groupId = properties.getProperty(ConsumerConfig.GROUP_ID.name());
         consumerId = properties.getProperty(ConsumerConfig.CONSUMER_ID.name());
-        sessionTimeout = Integer.parseInt(properties.getProperty(ConsumerConfig.SESSION_TIMEOUT.getValue(), "10000"));
-        heartbeatInterval = Integer.parseInt(properties.getProperty(ConsumerConfig.HEARTBEAT_INTERVAL.getValue(), "3000"));
+        sessionTimeout = Integer.parseInt(properties.getProperty(ConsumerConfig.SESSION_TIMEOUT.name(), "10000"));
+        heartbeatInterval = Integer.parseInt(properties.getProperty(ConsumerConfig.HEARTBEAT_INTERVAL.name(), "3000"));
 
         try {
             String[] address = properties.getProperty(ConsumerConfig.SERVER.name()).split(":");

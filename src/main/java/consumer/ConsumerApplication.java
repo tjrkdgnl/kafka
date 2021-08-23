@@ -15,8 +15,9 @@ public class ConsumerApplication {
         properties.put(ConsumerConfig.SERVER.name(), "127.0.0.1:8888");
         properties.put(ConsumerConfig.GROUP_ID.name(), "test_group");
         properties.put(ConsumerConfig.CONSUMER_ID.name(), "Consumer-0");
-        properties.put(ConsumerConfig.SESSION_TIMEOUT, 10000);
-        properties.put(ConsumerConfig.HEARTBEAT_INTERVAL, 3000);
+        properties.put(ConsumerConfig.SESSION_TIMEOUT.name(), "10000");
+        properties.put(ConsumerConfig.HEARTBEAT_INTERVAL.name(), "4000");
+        properties.put(ConsumerConfig.MAX_POLL_RECORDS.name(), "1");
 
 
         KafkaConsumer kafkaConsumer = new KafkaConsumer(properties);
@@ -25,7 +26,7 @@ public class ConsumerApplication {
 
         try {
             while (true) {
-                List<ConsumerRecord> consumerRecords = kafkaConsumer.poll();
+                List<ConsumerRecord> consumerRecords = kafkaConsumer.poll(4000);
 
                 for (ConsumerRecord consumerRecord : consumerRecords) {
                     System.out.printf("Topic: %s, Partition: %d, Offset: %d, Value: %s\n", consumerRecord.getTopicPartition().getTopic(),

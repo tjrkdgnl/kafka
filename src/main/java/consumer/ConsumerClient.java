@@ -15,7 +15,8 @@ public class ConsumerClient {
     public ConsumerClient(Properties properties, ChannelFuture channelFuture, String groupId, String consumerId) {
         subscribeState = new SubscribeState();
         metadata = new ConsumerMetadata();
-        fetcher = new Fetcher(properties, metadata, subscribeState, channelFuture, groupId, consumerId);
+        int recordSize = Integer.parseInt(properties.getProperty(ConsumerConfig.MAX_POLL_RECORDS.name(), "1"));
+        fetcher = new Fetcher(properties, metadata, subscribeState, channelFuture, groupId, consumerId, recordSize);
         heartbeatClient = new HeartbeatClient(properties);
     }
 
@@ -55,15 +56,15 @@ public class ConsumerClient {
         return this.fetcher;
     }
 
-    public void setUnCommitedOffset(HashMap<ConsumerOffsetInfo,Integer> unCommitedOffset){
+    public void setUnCommitedOffset(HashMap<ConsumerOffsetInfo, Integer> unCommitedOffset) {
         this.fetcher.setUnCommitedOffsetInfo(unCommitedOffset);
     }
 
-    public void updateOffset(){
+    public void updateOffset() {
         this.metadata.updateTopicPartitionAndOffset();
     }
 
-    public int getOffset(TopicPartition topicPartition){
+    public int getOffset(TopicPartition topicPartition) {
         return this.metadata.getOffset(topicPartition);
     }
 

@@ -76,11 +76,11 @@ public class KafkaConsumer {
         }
     }
 
-    public List<ConsumerRecord> poll() throws Exception {
+    public List<ConsumerRecord> poll(int timeOut) throws Exception {
 
         ConsumerManager.getInstance().poll(consumerId);
 
-        Thread.sleep(4000);
+        Thread.sleep(timeOut);
 
         return ConsumerManager.getInstance().getConsumerRecord(consumerId);
     }

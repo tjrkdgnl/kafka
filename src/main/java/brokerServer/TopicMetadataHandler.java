@@ -65,12 +65,10 @@ public class TopicMetadataHandler extends AvroSerializers {
                     Topics topics = (Topics) getDeserialization(buffer.array(), schema);
                     topicsListener.setTopics(topics);
 
-                    logger.info("topic info: " + BrokerServer.topics);
+                    logger.info("topic info: " + DataRepository.getInstance().getTopics());
 
                 } catch (EOFException e) {
                     logger.info("topicList에 존재하는 topic이 없습니다.");
-
-                    BrokerServer.topics = new Topics();
 
                 } catch (Exception e) {
                     logger.error(e);
@@ -115,9 +113,9 @@ public class TopicMetadataHandler extends AvroSerializers {
 
         Topic newTopicMetadata = new Topic(record.getTopic(), partitions, "0", 0);
 
-        BrokerServer.topics.getTopicList().add(newTopicMetadata);
+        DataRepository.getInstance().addTopic(newTopicMetadata);
 
-        byte[] bytes = getSerialization(BrokerServer.topics, schema);
+        byte[] bytes = getSerialization(DataRepository.getInstance().getTopics(), schema);
 
         ByteBuffer serialized = ByteBuffer.allocate(bytes.length);
         serialized.put(bytes);
@@ -135,7 +133,7 @@ public class TopicMetadataHandler extends AvroSerializers {
                     return;
                 }
                 logger.info("성공적으로 토픽을 생성했습니다.");
-                ctx.channel().writeAndFlush(new ResponseTopicMetadata(record,newTopicMetadata));
+                ctx.channel().writeAndFlush(new ResponseTopicMetadata(record, newTopicMetadata));
             }
 
             @Override

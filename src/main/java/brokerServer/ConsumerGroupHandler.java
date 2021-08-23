@@ -211,22 +211,24 @@ public class ConsumerGroupHandler {
                     //컨슈머에게 전송할 consumerRecords
                     List<ConsumerRecord> consumerRecords = new ArrayList<>();
 
+
                     for (TopicPartition topicPartition : topicPartitions) {
                         //offset metadata를 불러오기 위해서 topicInfo key를 생성하여 offset value를 얻어온다
                         ConsumerOffsetInfo consumerOffsetInfo = new ConsumerOffsetInfo(message.getGroupId(), message.getConsumerId(), topicPartition);
 
-                        int offset = dataRepository.getConsumerOffsetMap().get(consumerOffsetInfo);
-
-                        //현재 브로커 서버에서 관리되고 있는 레코드를 불러온다
-                        List<Record> records = DataRepository.getInstance().getRecords(topicPartition.getTopic());
+                        //현재 partition에 존재하는 records를 불러온다
+                        List<Record> records = DataRepository.getInstance().getRecords(topicPartition);
+                        int offset = dataRepository.getConsumerOffsetMap().getOrDefault(consumerOffsetInfo, 1);
+                        int maxRecordSize = message.getRecordSize() + offset;
 
                         for (Record record : records) {
-                            if (topicPartition.getPartition() != record.getPartition()) continue;
+                            if (offset == maxRecordSize) break;
 
                             ConsumerRecord consumerRecord = new ConsumerRecord(topicPartition, record.getOffset(), record.getMessage());
 
                             if (offset == record.getOffset() && !consumerRecords.contains(consumerRecord)) {
                                 consumerRecords.add(consumerRecord);
+                                offset++;
                             }
                         }
                     }

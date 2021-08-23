@@ -19,6 +19,7 @@ public class ConsumerMetadata {
     private int rebalanceId;
     private MemberState status;
     private HashMap<ConsumerOffsetInfo, Integer> uncommittedOffset;
+    private int recordSize;
 
     public ConsumerMetadata() {
         logger = Logger.getLogger(ConsumerMetadata.class);
@@ -26,6 +27,14 @@ public class ConsumerMetadata {
         rebalanceId = 0;
         status = MemberState.JOIN;
         uncommittedOffset = new HashMap<>();
+    }
+
+    public void setRecordSize(int recordSize) {
+        this.recordSize = recordSize;
+    }
+
+    public int getRecordSize() {
+        return recordSize;
     }
 
     private void clearUncommitedOffset() {

@@ -2,6 +2,7 @@ package brokerServer;
 
 import model.Record;
 import model.Records;
+import model.TopicPartition;
 import org.apache.avro.Schema;
 import org.apache.avro.reflect.ReflectData;
 import org.apache.log4j.Logger;
@@ -42,34 +43,25 @@ public class ConsumerRecordsHandler {
         defaultPath = Path.of(properties.getProperty(BrokerConfig.LOG_DIRS.getValue()));
     }
 
-    public void readRecords(String topic, RecordListener recordListener) {
+    public void readRecords(TopicPartition topicPartition, RecordListener recordListener) {
         executorService.submit(() -> {
-            List<Record> records = new ArrayList<>();
+            Path topicPath = Path.of(defaultPath + "/" + "broker-" + brokerID + "/" + topicPartition.getTopic() +
+                    "/" + PARTITION + topicPartition.getPartition());
+            Path logPath = Path.of(topicPath + "/" + LOG + "_");
+            File logFile = new File(topicPath.toString());
+            File[] logFiles = logFile.listFiles((dir, name) -> name.startsWith(LOG));
 
-            Path topicPath = Path.of(defaultPath + "/" + "broker-" + brokerID + "/" + topic);
-            File topicFile = new File(topicPath.toString());
-
-            for (int number = 0; number < topicFile.listFiles().length; number++) {
-                Path partitionPath = Path.of(topicPath + "/" + PARTITION + number);
-                Path logPath = Path.of(partitionPath + "/" + LOG + "_");
-
-                File logFile = new File(partitionPath.toString());
-
-                File[] logFiles = logFile.listFiles((dir, name) -> name.startsWith(LOG));
-
-                for (int logNumber = 0; logNumber < logFiles.length; logNumber++) {
-                    try {
-                        readProdcerRecord(logNumber, logPath, records);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+            for (int logNumber = 0; logNumber < logFiles.length; logNumber++) {
+                try {
+                    readProdcerRecord(logNumber, logPath, recordListener);
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
-            recordListener.setRecordsData(records);
         });
     }
 
-    private void readProdcerRecord(int offset, Path defaultLogPath, List<Record> records) throws IOException {
+    private void readProdcerRecord(int offset, Path defaultLogPath, RecordListener recordListener) throws IOException {
 
         //최근에 작성한 record file path
         Path logPath = Path.of(defaultLogPath.toString() + offset);
@@ -78,10 +70,10 @@ public class ConsumerRecordsHandler {
         File file = new File(logPath.toString());
 
         //record파일 읽기
-        readAsyncFileChannel(file, recordsSchema, records);
+        readAsyncFileChannel(file, recordsSchema, recordListener);
     }
 
-    private void readAsyncFileChannel(File file, Schema schema, List<Record> records) throws IOException {
+    private void readAsyncFileChannel(File file, Schema schema, RecordListener recordListener) throws IOException {
 
         AsynchronousFileChannel asynchronousFileChannel = AsynchronousFileChannel.open(file.toPath(), EnumSet.of(StandardOpenOption.READ), executorService);
 
@@ -95,7 +87,7 @@ public class ConsumerRecordsHandler {
                     return;
                 }
                 //파일로부터 읽어들이고 object로 변환하기
-                handlingAfterReading(byteBuffer.array(), schema, records);
+                handlingAfterReading(byteBuffer.array(), schema, recordListener);
 
                 closeAsyncChannel(asynchronousFileChannel);
             }
@@ -108,17 +100,12 @@ public class ConsumerRecordsHandler {
         });
     }
 
-    private void handlingAfterReading(byte[] bytes, Schema schema, List<Record> recordList) {
+    private void handlingAfterReading(byte[] bytes, Schema schema, RecordListener recordListener) {
         switch (schema.getName()) {
             case "Records":
                 try {
                     Records records = (Records) avroSerializers.getDeserialization(bytes, schema);
-
-                    for (Record record : records.getRecords()) {
-                        if (!recordList.contains(record)) {
-                            recordList.add(record);
-                        }
-                    }
+                    recordListener.setRecordsData(records.getRecords());
 
                 } catch (EOFException e) {
                     logger.info("records 파일에 값이 존재하지 않습니다.");

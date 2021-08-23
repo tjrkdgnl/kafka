@@ -20,7 +20,8 @@ public class Fetcher {
     private final ConsumerRecordClient consumerRecordClient;
     private final CommitClient commitClient;
 
-    public Fetcher(Properties properties, ConsumerMetadata consumerMetadata, SubscribeState subscribeState, ChannelFuture channelFuture, String groupId, String consumerId) {
+    public Fetcher(Properties properties, ConsumerMetadata consumerMetadata, SubscribeState subscribeState,
+                   ChannelFuture channelFuture, String groupId, String consumerId, int recordSize) {
         this.logger = Logger.getLogger(Fetcher.class);
         this.metadata = consumerMetadata;
         this.subscribeState = subscribeState;
@@ -29,6 +30,7 @@ public class Fetcher {
         this.consumerId = consumerId;
         this.consumerRecordClient = new ConsumerRecordClient(properties);
         this.commitClient = new CommitClient(properties);
+        this.metadata.setRecordSize(recordSize);
     }
 
     public void changeStatus(MemberState status) {
@@ -56,14 +58,14 @@ public class Fetcher {
         if (metadata.getStatus() == MemberState.STABLE) {
             if (this.metadata.checkUnCommitedOffset()) {
                 //커밋처리가 됐을 때 다음 consumerRecord를 얻기위해 request를 보낸다
-                consumerRecordClient.requestConsumerRecords(this.metadata.getStatus(), metadata.getRebalanceId(),
-                        subscribeState.getSubscriptions(), consumerId, groupId);
+                consumerRecordClient.requestConsumerRecords(metadata.getStatus(), metadata.getRebalanceId(),
+                        subscribeState.getSubscriptions(), consumerId, groupId, metadata.getRecordSize());
             } else {
                 //커밋처리가 안되어 있는 경우 커밋처리 요청을 보낸다
                 commitClient.requestCommit(consumerId, this.metadata.getUncommittedOffset());
             }
         } else {
-            channelFuture.channel().writeAndFlush(new RequestMessage(this.metadata.getStatus(), metadata.getRebalanceId(),
+            channelFuture.channel().writeAndFlush(new RequestMessage(metadata.getStatus(), metadata.getRebalanceId(),
                     subscribeState.getSubscriptions(), consumerId, groupId));
         }
     }

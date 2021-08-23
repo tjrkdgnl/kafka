@@ -22,7 +22,8 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
     private final ConsumerGroupHandler consumerGroupHandler = new ConsumerGroupHandler(BrokerServer.getProperties());
     private final HeartbeatHandler heartbeatHandler = new HeartbeatHandler();
     private final ConsumerGroupOffsetHandler consumerGroupOffsetHandler = new ConsumerGroupOffsetHandler(BrokerServer.getProperties());
-
+    private final DataRepository dataRepository = DataRepository.getInstance();
+    private final TopicMetadataHandler topicMetadataHandler = new TopicMetadataHandler(BrokerServer.getProperties());
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -38,7 +39,7 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
                 RequestTopicMetaData requestTopicMetaData = (RequestTopicMetaData) obj;
 
                 //토픽 데이터를 읽어온 후 클라이언트에게 전송한다
-                for (Topic topic : BrokerServer.topics.getTopicList()) {
+                for (Topic topic : dataRepository.getTopics().getTopicList()) {
                     if (topic.getTopic().equals(requestTopicMetaData.producerRecord().getTopic())) {
                         ctx.channel().writeAndFlush(new ResponseTopicMetadata(requestTopicMetaData.producerRecord(), topic));
                         return;
@@ -46,7 +47,7 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
                 }
 
                 //토픽이 존재하지 않으면 토픽을 생성한다
-                BrokerServer.getTopicMetadataHandler().createTopic(ctx, requestTopicMetaData.producerRecord());
+                topicMetadataHandler.createTopic(ctx, requestTopicMetaData.producerRecord());
 
             } else if (obj instanceof ProducerRecord) {
                 logger.info("브로커가 프로듀서로부터 Record를 받았습니다.");

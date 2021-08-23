@@ -17,6 +17,10 @@ public class Topics implements Serializable {
         this.topicList =new ArrayList<>();
     }
 
+    public Topics(List<Topic> topics){
+        this.topicList =topics;
+    }
+
     public List<Topic> getTopicList() {
         return topicList;
     }
