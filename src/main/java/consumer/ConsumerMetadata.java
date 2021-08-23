@@ -79,8 +79,13 @@ public class ConsumerMetadata {
     }
 
     public void setTopicPartitions(List<TopicPartition> topicPartitions) {
-        for (TopicPartition topicPartition : topicPartitions) {
-            this.topicPartitionAndOffset.put(topicPartition, 1);
+        if (topicPartitions != null) {
+            for (TopicPartition topicPartition : topicPartitions) {
+                this.topicPartitionAndOffset.put(topicPartition, 1);
+            }
+        }
+        else{
+            logger.info("지정된 ownership이 존재하지 않습니다.");
         }
     }
 

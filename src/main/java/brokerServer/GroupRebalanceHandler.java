@@ -34,12 +34,12 @@ public class GroupRebalanceHandler {
                 //구체적인 topic과 partition을 구독한 경우
                 if (topicPartition.getPartition() != -1) {
                     consumerGroup.addAssignedTopicPartition(message.getConsumerId(), topicPartition);
+                } else {
+                    if (!consumerList.contains(message.getConsumerId())) {
+                        consumerList.add(message.getConsumerId());
+                        consumerGroup.setConsumerList(topicPartition.getTopic(), consumerList);
+                    }
                 }
-
-                if (!consumerList.contains(message.getConsumerId())) {
-                    consumerList.add(message.getConsumerId());
-                }
-                consumerGroup.setConsumerList(topicPartition.getTopic(), consumerList);
             }
 
             //consumer들이 구독한 토픽들을 가져온다
@@ -78,7 +78,7 @@ public class GroupRebalanceHandler {
                             if (checkTopicPartition) {
                                 continue;
                             }
-
+                            //ownership이 변경됨에 따라서 offset도 업데이트시켜준다
                             updateOffsetInfo(topicPartition, consumerGroup.getGroupId(), consumersInGroup.get(consumerIdx));
 
                             //consumer와 토픽의 파티션을 맵핑하고 저장한다

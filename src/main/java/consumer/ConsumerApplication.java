@@ -1,6 +1,7 @@
 package consumer;
 
 import model.ConsumerRecord;
+import model.TopicPartition;
 import org.apache.log4j.Logger;
 
 import java.util.Arrays;
@@ -19,11 +20,11 @@ public class ConsumerApplication {
         properties.put(ConsumerConfig.SESSION_TIMEOUT.name(), "10000");
         properties.put(ConsumerConfig.HEARTBEAT_INTERVAL.name(), "4000");
         properties.put(ConsumerConfig.MAX_POLL_RECORDS.name(), "2");
-        properties.put(ConsumerConfig.MAX_POLL_INTERVAL,"4000");
+        properties.put(ConsumerConfig.MAX_POLL_INTERVAL, "4000");
 
         KafkaConsumer kafkaConsumer = new KafkaConsumer(properties);
 
-        kafkaConsumer.subscribe(Arrays.asList("test"));
+        kafkaConsumer.assign(Arrays.asList(new TopicPartition("test", 1)));
 
         try {
             while (true) {

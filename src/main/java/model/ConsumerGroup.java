@@ -7,6 +7,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ConsumerGroup implements Serializable {
     private String groupId;
@@ -39,9 +40,16 @@ public class ConsumerGroup implements Serializable {
     public void addAssignedTopicPartition(String consumerId, TopicPartition topicPartition) {
         List<TopicPartition> list = assignedOwnershipMap.getOrDefault(consumerId, new ArrayList<>());
 
-        if (!list.contains(topicPartition)) {
-            list.add(topicPartition);
+        for (Map.Entry<String, List<TopicPartition>> assignedList : assignedOwnershipMap.entrySet()) {
+            String consumer = assignedList.getKey();
+            List<TopicPartition> assignedTopicPartitions = assignedList.getValue();
+
+            if (!consumer.equals(consumerId) && assignedTopicPartitions.contains(topicPartition)) {
+                return;
+            }
         }
+
+        list.add(topicPartition);
         assignedOwnershipMap.put(consumerId, list);
     }
 
