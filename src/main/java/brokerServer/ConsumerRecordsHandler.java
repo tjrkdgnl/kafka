@@ -54,7 +54,7 @@ public class ConsumerRecordsHandler {
                 try {
                     readProdcerRecord(logNumber, logPath, recordListener);
                 } catch (IOException e) {
-                    logger.info("records를 읽던 중 문제가 발생했습니다. ", e);
+                    logger.error("records를 읽던 중 문제가 발생했습니다. ", e);
                 }
             }
         });

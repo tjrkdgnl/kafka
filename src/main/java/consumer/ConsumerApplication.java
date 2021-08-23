@@ -36,7 +36,7 @@ public class ConsumerApplication {
                 }
             }
         } catch (Exception e) {
-            logger.info("polling 중 문제가 발생했습니다.", e);
+            logger.error("polling 중 문제가 발생했습니다.", e);
         } finally {
             kafkaConsumer.close();
         }
