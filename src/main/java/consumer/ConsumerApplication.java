@@ -18,9 +18,9 @@ public class ConsumerApplication {
         properties.put(ConsumerConfig.GROUP_ID.name(), "test_group");
         properties.put(ConsumerConfig.CONSUMER_ID.name(), "Consumer-0");
         properties.put(ConsumerConfig.SESSION_TIMEOUT.name(), "10000");
-        properties.put(ConsumerConfig.HEARTBEAT_INTERVAL.name(), "4000");
-        properties.put(ConsumerConfig.MAX_POLL_RECORDS.name(), "2");
-        properties.put(ConsumerConfig.MAX_POLL_INTERVAL, "4000");
+        properties.put(ConsumerConfig.HEARTBEAT_INTERVAL.name(), "3000");
+        properties.put(ConsumerConfig.MAX_POLL_RECORDS.name(), "1");
+        properties.put(ConsumerConfig.MAX_POLL_INTERVAL.name(), "5000");
 
         KafkaConsumer kafkaConsumer = new KafkaConsumer(properties);
 
