@@ -1,6 +1,6 @@
 package brokerServer;
 
-import model.Record;
+import model.RecordData;
 import model.Records;
 import model.TopicPartition;
 import org.apache.avro.Schema;
@@ -128,7 +128,7 @@ public class ConsumerRecordsHandler {
 
     @FunctionalInterface
     public interface RecordListener {
-        void setRecordsData(List<Record> records);
+        void setRecordsData(List<RecordData> recordData);
     }
 
 }

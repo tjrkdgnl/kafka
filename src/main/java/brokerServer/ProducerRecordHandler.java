@@ -19,7 +19,6 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.EnumSet;
 import java.util.Properties;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -29,12 +28,8 @@ public class ProducerRecordHandler {
     private final String OFFSET = "offset";
     private final String PARTITION = "partition";
     private final ExecutorService executorService;
-    private final CompletableFuture<Object> offsetFuture;
-    private final CompletableFuture<Object> recordsFuture;
-    private ProducerRecord producerRecord;
     private ChannelHandlerContext ctx;
-    private Offsets offsets;
-    private int maxSegmentSize;
+    private final int maxSegmentSize;
     private Path defaultLogPath;
     private Path defaultOffsetPath;
     private Path topicPath;
@@ -48,32 +43,47 @@ public class ProducerRecordHandler {
 
         this.properties = properties;
         executorService = Executors.newFixedThreadPool(ioThread);
-        offsetFuture = new CompletableFuture<>();
-        recordsFuture = new CompletableFuture<>();
         offsetSchema = ReflectData.get().getSchema(Offsets.class);
         recordsSchema = ReflectData.get().getSchema(Records.class);
         avroSerializers = new AvroSerializers();
-    }
-
-    public ProducerRecordHandler init(ChannelHandlerContext ctx, ProducerRecord producerRecord) {
-        this.ctx = ctx;
         this.maxSegmentSize = Integer.parseInt(properties.getProperty(BrokerConfig.SEGMENT_BYTES.getValue()));
-        this.producerRecord = producerRecord;
-
-        String brokerID = properties.getProperty(BrokerConfig.ID.getValue());
-        Path defaultPath = Path.of(properties.getProperty(BrokerConfig.LOG_DIRS.getValue()));
-
-        topicPath = Path.of(defaultPath + "/" + "broker-" + brokerID + "/" + producerRecord.getTopic() + "/" + PARTITION + producerRecord.getPartition());
-        defaultLogPath = Path.of(topicPath + "/" + LOG + "_");
-        defaultOffsetPath = Path.of(topicPath + "/" + OFFSET + "_");
-
-        return this;
     }
 
-    public void saveProducerRecord() {
-        //chain을 통해서 비동기적으로 파일을 offset과 records를 읽고 쓰는 작업을 실행
-        CompletableFuture.supplyAsync(() -> {
+
+    public void saveProducerRecord(ChannelHandlerContext ctx, ProducerRecord producerRecord) {
+        ctx.executor().submit(() -> {
+            this.ctx = ctx;
+
+            LogOffsetListener logOffsetListener = offsets -> {
+                //만약 offset list가 존재하지 않는다면 초기 offsetData 셋팅
+                if (offsets != null && offsets.getOffsetDataList().size() == 0) {
+                    offsets.getOffsetDataList().add(new OffsetData(0, 0, 0));
+                }
+
+                RecordsListener recordsListener = records -> {
+                    try {
+                        writeProducerRecord(records, offsets, producerRecord);
+                    } catch (IOException e) {
+                        logger.error("records를 작성하던 중 문제가 발생했습니다.", e);
+                    }
+                };
+
+                try {
+                    int size = offsets.getOffsetDataList().size();
+                    readProdcerRecord(offsets.getOffsetDataList().get(size - 1), null, recordsListener);
+                } catch (Exception e) {
+                    logger.error("records를 가져오는 중 문제가 발생했습니다.", e);
+                }
+            };
+
             try {
+                String brokerID = properties.getProperty(BrokerConfig.ID.getValue());
+                Path defaultPath = Path.of(properties.getProperty(BrokerConfig.LOG_DIRS.getValue()));
+
+                topicPath = Path.of(defaultPath + "/" + "broker-" + brokerID + "/" + producerRecord.getTopic() + "/" + PARTITION + producerRecord.getPartition());
+                defaultLogPath = Path.of(topicPath + "/" + LOG + "_");
+                defaultOffsetPath = Path.of(topicPath + "/" + OFFSET + "_");
+
                 if (!Files.exists(topicPath)) {
                     try {
                         Files.createDirectories(topicPath);
@@ -84,52 +94,16 @@ public class ProducerRecordHandler {
                     }
                 }
 
-                readOffset();
-
-                offsets = (Offsets) offsetFuture.get();
-
-                //만약 offset list가 존재하지 않는다면 초기 offsetData 셋팅
-                if (offsets.getOffsetDataList().size() == 0) {
-                    offsets.getOffsetDataList().add(new OffsetData(0, 0, 0));
-                }
-                int size = offsets.getOffsetDataList().size();
-
-                //최신 offset 파일의 offsets을 전달
-                return offsets.getOffsetDataList().get(size - 1);
+                readOffset(logOffsetListener);
 
             } catch (Exception e) {
                 logger.error("offsetData를 가져오는 중 문제가 발생했습니다.", e);
-            }
-
-            return null;
-
-        }).thenApplyAsync(offsetData -> {
-            try {
-                //offsets의 마지막 offsetData를 전달
-                readProdcerRecord(offsetData);
-
-                return (Records) recordsFuture.get();
-
-            } catch (Exception e) {
-                logger.error("records를 가져오는 중 문제가 발생했습니다.", e);
-            }
-
-            return null;
-
-        }).thenAcceptAsync((records) -> {
-            try {
-                int size = offsets.getOffsetDataList().size();
-
-                writeProducerRecord(records, offsets.getOffsetDataList().get(size - 1));
-
-            } catch (Exception e) {
-                logger.error("records를 작성하던 중 문제가 발생했습니다.", e);
             }
         });
     }
 
 
-    private void readOffset() throws IOException {
+    private void readOffset(LogOffsetListener offsetListener) throws IOException {
 
         File rootFile = new File(topicPath.toString());
 
@@ -151,7 +125,7 @@ public class ProducerRecordHandler {
         File lastOffsetFile = offsetFiles[offsetFiles.length - 1];
 
         //최근 offsetFile을 읽기
-        readAsyncFileChannel(lastOffsetFile, offsetSchema);
+        readAsyncFileChannel(lastOffsetFile, offsetSchema, offsetListener, null);
 
     }
 
@@ -197,7 +171,7 @@ public class ProducerRecordHandler {
     }
 
 
-    private void readProdcerRecord(OffsetData lastOffsetData) throws IOException {
+    private void readProdcerRecord(OffsetData lastOffsetData, LogOffsetListener logOffsetListener, RecordsListener recordsListener) throws IOException {
 
         //최근에 작성한 record file path
         Path logPath = Path.of(defaultLogPath.toString() + lastOffsetData.getPhysicalOffset());
@@ -211,11 +185,13 @@ public class ProducerRecordHandler {
         File file = new File(logPath.toString());
 
         //record파일 읽기
-        readAsyncFileChannel(file, recordsSchema);
+        readAsyncFileChannel(file, recordsSchema, logOffsetListener, recordsListener);
     }
 
 
-    private void writeProducerRecord(Records records, OffsetData lastOffsetData) throws IOException {
+    private void writeProducerRecord(Records records, Offsets offsets, ProducerRecord producerRecord) throws IOException {
+        int size = offsets.getOffsetDataList().size();
+        OffsetData lastOffsetData = offsets.getOffsetDataList().get(size - 1);
 
         Path lastLogPath = Path.of(defaultLogPath.toString() + lastOffsetData.getPhysicalOffset());
 
@@ -226,15 +202,15 @@ public class ProducerRecordHandler {
                 , lastOffsetData.getRelativeOffset() + 1);
 
         //추가될 newRecord 작성
-        Record newRecord = new Record(producerRecord.getTopic(), producerRecord.getValue(),
+        RecordData newRecordData = new RecordData(producerRecord.getTopic(), producerRecord.getValue(),
                 producerRecord.getPartition(), newOffsetData.getRelativeOffset());
 
         int lastLogSize = (int) lastLogFile.length();
-        int newRecordSize = newRecord.size();
+        int newRecordSize = newRecordData.size();
 
         if (lastLogSize + newRecordSize <= maxSegmentSize) {
             //현재 record file이 여유로울 때
-            records.getRecords().add(newRecord);
+            records.getRecords().add(newRecordData);
             writeAsyncFileChannel(lastLogFile, recordsSchema, records);
         } else {
             logger.info("새 로그 파일을 생성합니다.");
@@ -252,7 +228,7 @@ public class ProducerRecordHandler {
             //새 log 파일에 작성할 records 생성 후  newRecord 저장
             Records newRecords = new Records();
 
-            newRecords.getRecords().add(newRecord);
+            newRecords.getRecords().add(newRecordData);
 
             writeAsyncFileChannel(nextLogFile, recordsSchema, newRecords);
         }
@@ -262,7 +238,7 @@ public class ProducerRecordHandler {
     }
 
 
-    private void readAsyncFileChannel(File file, Schema schema) throws IOException {
+    private void readAsyncFileChannel(File file, Schema schema, LogOffsetListener logOffsetListener, RecordsListener recordsListener) throws IOException {
 
         AsynchronousFileChannel asynchronousFileChannel = AsynchronousFileChannel.open(file.toPath(), EnumSet.of(StandardOpenOption.READ), executorService);
 
@@ -276,7 +252,7 @@ public class ProducerRecordHandler {
                     return;
                 }
                 //파일로부터 읽어들이고 object로 변환하기
-                handlingAfterReading(byteBuffer.array(), schema);
+                handlingAfterReading(byteBuffer.array(), schema, logOffsetListener, recordsListener);
 
                 closeAsyncChannel(asynchronousFileChannel);
             }
@@ -338,22 +314,22 @@ public class ProducerRecordHandler {
     }
 
 
-    private void handlingAfterReading(byte[] bytes, Schema schema) {
+    private void handlingAfterReading(byte[] bytes, Schema schema, LogOffsetListener logOffsetListener, RecordsListener recordsListener) {
         switch (schema.getName()) {
             case "Records":
                 try {
                     Records records = (Records) avroSerializers.getDeserialization(bytes, schema);
-                    recordsFuture.complete(records);
+                    recordsListener.setRecords(records);
                     logger.info("record를 성공적으로 읽었습니다.");
                 } catch (EOFException e) {
                     logger.info("records 파일에 값이 존재하지 않습니다.");
 
-                    recordsFuture.complete(new Records());
+                    recordsListener.setRecords(new Records());
 
                     return;
                 } catch (Exception e) {
                     logger.error("byte[]을 Object로 변환하는 과정에서 오류가 발생했습니다.", e);
-                    recordsFuture.complete(null);
+                    recordsListener.setRecords(null);
                 }
 
                 break;
@@ -362,19 +338,30 @@ public class ProducerRecordHandler {
                 try {
                     Offsets offsets = (Offsets) avroSerializers.getDeserialization(bytes, schema);
 
-                    offsetFuture.complete(offsets);
+                    logOffsetListener.setOffsets(offsets);
                     logger.info("성공적으로 offsets을 읽었습니다.");
                 } catch (EOFException e) {
                     logger.info("현재 offset 파일은 값이 존재하지 않습니다");
 
-                    offsetFuture.complete(new Offsets());
+                    logOffsetListener.setOffsets(new Offsets());
                 } catch (Exception e) {
                     logger.error("byte[]을 Object로 변환하는 과정에서 오류가 발생했습니다.", e);
-                    offsetFuture.complete(null);
+                    logOffsetListener.setOffsets(null);
                 }
 
                 break;
         }
+    }
+
+
+    @FunctionalInterface
+    public interface LogOffsetListener {
+        void setOffsets(Offsets offsets);
+    }
+
+    @FunctionalInterface
+    public interface RecordsListener {
+        void setRecords(Records records);
     }
 
     private void closeAsyncChannel(AsynchronousFileChannel asynchronousFileChannel) {

@@ -220,16 +220,16 @@ public class ConsumerGroupHandler {
                         ConsumerOffsetInfo consumerOffsetInfo = new ConsumerOffsetInfo(message.getGroupId(), message.getConsumerId(), topicPartition);
 
                         //현재 partition에 존재하는 records를 불러온다
-                        List<Record> records = DataRepository.getInstance().getRecords(topicPartition);
+                        List<RecordData> records = DataRepository.getInstance().getRecords(topicPartition);
                         int offset = dataRepository.getConsumerOffsetMap().getOrDefault(consumerOffsetInfo, 1);
                         int maxRecordSize = message.getRecordSize() + offset;
 
-                        for (Record record : records) {
+                        for (RecordData recordData : records) {
                             if (offset == maxRecordSize) break;
 
-                            ConsumerRecord consumerRecord = new ConsumerRecord(topicPartition, record.getOffset(), record.getMessage());
+                            ConsumerRecord consumerRecord = new ConsumerRecord(topicPartition, recordData.getOffset(), recordData.getMessage());
 
-                            if (offset == record.getOffset() && !consumerRecords.contains(consumerRecord)) {
+                            if (offset == recordData.getOffset() && !consumerRecords.contains(consumerRecord)) {
                                 consumerRecords.add(consumerRecord);
                                 offset++;
                             }

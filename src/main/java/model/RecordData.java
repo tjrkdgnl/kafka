@@ -15,17 +15,17 @@ import java.util.Objects;
  * @variable partition: topic의 파티션
  * @variable offset: relativeOffset. 해당 offset을 통해 consume하는데 소비
  */
-public class Record implements Serializable {
+public class RecordData implements Serializable {
     String topic;
     String message;
     int partition;
     int offset;
 
-    public Record(){
+    public RecordData(){
 
     }
 
-    public Record(String topic,String message,int partition,int offset){
+    public RecordData(String topic, String message, int partition, int offset){
         this.topic =topic;
         this.message =message;
         this.partition =partition;
@@ -57,8 +57,8 @@ public class Record implements Serializable {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Record record = (Record) o;
-        return partition == record.partition && offset == record.offset && Objects.equals(topic, record.topic) && Objects.equals(message, record.message);
+        RecordData recordData = (RecordData) o;
+        return partition == recordData.partition && offset == recordData.offset && Objects.equals(topic, recordData.topic) && Objects.equals(message, recordData.message);
     }
 
     @Override

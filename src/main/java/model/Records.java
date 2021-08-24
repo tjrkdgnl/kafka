@@ -9,14 +9,14 @@ import java.util.List;
 
 public class Records implements Serializable {
 
-    private List<Record> records;
+    private List<RecordData> recordData;
 
     public Records(){
-        records = new ArrayList<>();
+        recordData = new ArrayList<>();
     }
 
-    public List<Record> getRecords() {
-        return records;
+    public List<RecordData> getRecords() {
+        return recordData;
     }
 
     @Override

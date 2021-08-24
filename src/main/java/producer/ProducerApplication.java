@@ -8,7 +8,7 @@ public class ProducerApplication {
 
         KafkaProducer kafkaProducer = new KafkaProducer("127.0.0.1", 8888);
 
-        kafkaProducer.send(new ProducerRecord("group", "this is test"));
+        kafkaProducer.send(new ProducerRecord("report", "this is test"));
     }
 }
 

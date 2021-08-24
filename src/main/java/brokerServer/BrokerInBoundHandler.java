@@ -53,7 +53,7 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
                 logger.info("브로커가 프로듀서로부터 Record를 받았습니다.");
                 ProducerRecord record = (ProducerRecord) obj;
                 //record를 작성한 후 client에게 전송한다
-                producerRecordHandler.init(ctx, record).saveProducerRecord();
+                producerRecordHandler.saveProducerRecord(ctx, record);
 
             } else if (obj instanceof RequestMessage) {
                 RequestMessage message = (RequestMessage) obj;

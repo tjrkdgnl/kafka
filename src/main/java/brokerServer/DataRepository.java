@@ -17,7 +17,7 @@ public class DataRepository {
     //ConsumerTopicInfo-offset
     private final ConcurrentHashMap<ConsumerOffsetInfo, Integer> consumersOffsetMap;
     //topic-records
-    private final ConcurrentHashMap<TopicPartition, List<Record>> recordsMap;
+    private final ConcurrentHashMap<TopicPartition, List<RecordData>> recordsMap;
 
 
     public DataRepository() {
@@ -61,11 +61,11 @@ public class DataRepository {
         consumersOffsetMap.remove(offsetInfo);
     }
 
-    public void setRecords(TopicPartition topicPartition, List<Record> records) {
-        recordsMap.put(topicPartition, records);
+    public void setRecords(TopicPartition topicPartition, List<RecordData> recordData) {
+        recordsMap.put(topicPartition, recordData);
     }
 
-    public List<Record> getRecords(TopicPartition topicPartition) {
+    public List<RecordData> getRecords(TopicPartition topicPartition) {
         return new ArrayList<>(recordsMap.get(topicPartition));
     }
 
