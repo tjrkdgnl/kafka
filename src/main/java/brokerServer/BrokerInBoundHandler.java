@@ -47,7 +47,7 @@ public class BrokerInBoundHandler extends ChannelInboundHandlerAdapter {
                 }
 
                 //토픽이 존재하지 않으면 토픽을 생성한다
-                topicMetadataHandler.createTopic(ctx, requestTopicMetaData.producerRecord());
+                topicMetadataHandler.createTopic(ctx, requestTopicMetaData.producerRecord(),"Producer");
 
             } else if (obj instanceof ProducerRecord) {
                 logger.info("브로커가 프로듀서로부터 Record를 받았습니다.");

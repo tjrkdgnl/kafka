@@ -35,7 +35,7 @@ public class ProducerInBoundHandler extends ChannelInboundHandlerAdapter {
                 } else if (ack.getStatus() == 400) {
                     logger.error(ack.getMessage());
                 } else {
-                    logger.error(ERROR.UNKNOWN_STATUS_ERROR + ack.getMessage());
+                    logger.error(ack.getMessage());
                 }
             }
         } catch (Exception e) {

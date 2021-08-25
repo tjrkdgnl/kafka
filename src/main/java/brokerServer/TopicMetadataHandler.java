@@ -85,7 +85,7 @@ public class TopicMetadataHandler extends AvroSerializers {
         });
     }
 
-    public void createTopic(ChannelHandlerContext ctx, ProducerRecord record) throws Exception {
+    public void createTopic(ChannelHandlerContext ctx, ProducerRecord record, String owner) throws Exception {
 
         String autoCreateTopic = properties.getProperty(BrokerConfig.AUTO_CREATE_TOPIC.getValue());
         int partitions = Integer.parseInt(properties.getProperty(BrokerConfig.TOPIC_PARTITIONS.getValue()));
@@ -93,10 +93,13 @@ public class TopicMetadataHandler extends AvroSerializers {
         String brokerID = properties.getProperty(BrokerConfig.ID.getValue());
         Schema schema = ReflectData.get().getSchema(Topics.class);
 
-        if (autoCreateTopic.equals("false")) {
-            ctx.channel().writeAndFlush(new AckData(500, "\"" + record.getTopic() + "\"" + "은 broker에 존재하지 않습니다."));
-            return;
+        if (owner.equals("Producer")) {
+            if (autoCreateTopic.equals("false")) {
+                ctx.channel().writeAndFlush(new AckData(500, "\"" + record.getTopic() + "\"" + "은 broker에 존재하지 않습니다."));
+                return;
+            }
         }
+
 
         //todo controller에 연결된 브로커 개수에 따라서 replication-factor가 정해질 수 있어야 한다
 //      if ( replicationFactor > 현재 controller와 연결된 broker들의 개수) {

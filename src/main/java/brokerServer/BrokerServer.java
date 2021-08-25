@@ -77,8 +77,7 @@ public class BrokerServer {
     }
 
     public void createTopic(String topic) throws Exception {
-
-        topicMetadataHandler.createTopic(null,new ProducerRecord(topic,""));
+        topicMetadataHandler.createTopic(null,new ProducerRecord(topic,""),"Broker");
     }
 
     public static Properties getProperties() {
