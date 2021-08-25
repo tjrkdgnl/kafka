@@ -1,7 +1,7 @@
 package consumer;
 
 import io.netty.channel.ChannelFuture;
-import model.ConsumerGroup;
+import model.schema.ConsumerGroup;
 import model.ConsumerOffsetInfo;
 import model.request.RequestMessage;
 import org.apache.log4j.Logger;
@@ -38,13 +38,6 @@ public class Fetcher {
     }
 
     public void updateTopicPartitions(ConsumerGroup consumerGroup) {
-        this.metadata.setRebalanceId(consumerGroup.getRebalanceId());
-
-        this.metadata.setTopicPartitions(consumerGroup.getOwnershipMap().get(consumerId));
-
-        logger.info("consumerGroup-> " + consumerGroup);
-        logger.info("업데이트 완료");
-
         this.metadata.setRebalanceId(consumerGroup.getRebalanceId());
         this.metadata.setTopicPartitions(consumerGroup.getOwnershipMap().get(consumerId));
         this.metadata.setStatus(MemberState.STABLE);

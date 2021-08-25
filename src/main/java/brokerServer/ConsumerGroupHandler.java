@@ -5,6 +5,7 @@ import model.*;
 import model.request.RequestMessage;
 import model.response.ResponseConsumerRecords;
 import model.response.UpdateGroupInfo;
+import model.schema.ConsumerGroup;
 import org.apache.avro.Schema;
 import org.apache.avro.reflect.ReflectData;
 import org.apache.log4j.Logger;
@@ -108,8 +109,11 @@ public class ConsumerGroupHandler {
                 case SUCCESS:
                     writeAsyncFileChannel(file, ctx, message, consumerGroup);
                     break;
+                case DUPLICATE_ASSIGN:
+                    ctx.channel().writeAndFlush(new AckData(400, "해당 파티션은 이미 ownership이 존재합니다."));
+                    break;
                 case FAIL:
-                    logger.error("리밸런스를 진행하던 중 문제가 발생했습니다.");
+                    new AckData(400, "리밸런스를 진행하던 중 문제가 발생했습니다.");
                     break;
             }
         };
@@ -221,6 +225,7 @@ public class ConsumerGroupHandler {
 
                         //현재 partition에 존재하는 records를 불러온다
                         List<RecordData> records = DataRepository.getInstance().getRecords(topicPartition);
+
                         int offset = dataRepository.getConsumerOffsetMap().getOrDefault(consumerOffsetInfo, 1);
                         int maxRecordSize = message.getRecordSize() + offset;
 

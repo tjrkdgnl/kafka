@@ -2,6 +2,8 @@ package brokerServer;
 
 import model.*;
 import model.request.RequestMessage;
+import model.schema.ConsumerGroup;
+import model.schema.Topics;
 import org.apache.log4j.Logger;
 import util.RebalanceState;
 
@@ -24,6 +26,16 @@ public class GroupRebalanceHandler {
 
     public void runRebalance(ConsumerGroup consumerGroup, RequestMessage message, RebalanceCallbackListener listener) throws Exception {
         try {
+            for (List<TopicPartition> assignedList : consumerGroup.getAssignedOwnershipMap().values()) {
+                for (TopicPartition topicPartition : message.getSubscriptions()) {
+                    if (assignedList.contains(topicPartition)) {
+                       listener.setResult(RebalanceState.DUPLICATE_ASSIGN);
+                        return;
+                    }
+                }
+            }
+
+
             consumerGroup.setGroupId(message.getGroupId());
             consumerGroup.setRebalanceId(consumerGroup.getRebalanceId() + 1);
 

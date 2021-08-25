@@ -1,24 +1,23 @@
-package model;
+package model.schema;
 
+import model.RecordData;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * offsetData를 리스트형태로 저장하기 위한 class
- */
-public class Offsets {
+public class Records implements Serializable {
 
-    private List<OffsetData> offsetDataList;
+    private List<RecordData> recordData;
 
-    public Offsets(){
-        offsetDataList =new ArrayList<>();
+    public Records(){
+        recordData = new ArrayList<>();
     }
 
-    public List<OffsetData> getOffsetDataList() {
-        return offsetDataList;
+    public List<RecordData> getRecords() {
+        return recordData;
     }
 
     @Override

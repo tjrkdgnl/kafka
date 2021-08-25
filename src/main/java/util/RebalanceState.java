@@ -2,6 +2,6 @@ package util;
 
 public enum RebalanceState {
 
-    SUCCESS, FAIL, EXIT
+    SUCCESS, FAIL,DUPLICATE_ASSIGN
 
 }

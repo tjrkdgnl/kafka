@@ -1,5 +1,6 @@
-package model;
+package model.schema;
 
+import model.TopicPartition;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
@@ -22,6 +23,7 @@ public class ConsumerGroup implements Serializable {
 
 
     public ConsumerGroup() {
+        groupId ="";
         ownershipMap = new HashMap<>();
         topicMap = new HashMap<>();
         assignedOwnershipMap = new HashMap<>();
@@ -45,6 +47,10 @@ public class ConsumerGroup implements Serializable {
         ownershipMap = new HashMap<>();
         topicMap = new HashMap<>();
         assignedOwnershipMap = new HashMap<>();
+    }
+
+    public HashMap<String, List<TopicPartition>> getAssignedOwnershipMap(){
+        return new HashMap<>(assignedOwnershipMap);
     }
 
     public void addAssignedTopicPartition(String consumerId, TopicPartition topicPartition) {

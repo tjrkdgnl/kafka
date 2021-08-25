@@ -1,6 +1,6 @@
 package model.response;
 
-import model.ConsumerGroup;
+import model.schema.ConsumerGroup;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import util.GroupStatus;

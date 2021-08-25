@@ -37,8 +37,6 @@ public class ProducerInBoundHandler extends ChannelInboundHandlerAdapter {
                 } else {
                     logger.error(ERROR.UNKNOWN_STATUS_ERROR + ack.getMessage());
                 }
-            } else {
-                logger.error(ERROR.UNKNOWN_ERROR);
             }
         } catch (Exception e) {
             logger.error("broker로부터 받은 msg object를 parsing하던 중 문제가 발생했습니다.", e);

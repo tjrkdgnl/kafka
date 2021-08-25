@@ -1,7 +1,7 @@
 package brokerServer;
 
 import io.netty.channel.ChannelHandlerContext;
-import model.ConsumerGroupsOffsetInfo;
+import model.schema.ConsumerGroupsOffsetInfo;
 import model.ConsumerOffsetInfo;
 import model.request.RequestCommit;
 import model.response.ResponseCommit;

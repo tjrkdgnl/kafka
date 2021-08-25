@@ -1,5 +1,6 @@
-package model;
+package model.schema;
 
+import model.Topic;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.io.Serializable;
@@ -21,7 +22,8 @@ public class Topics implements Serializable {
         this.topicList =topics;
     }
 
-    public List<Topic> getTopicList() {
+    public List<Topic>
+    getTopicList() {
         return topicList;
     }
 

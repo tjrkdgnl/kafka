@@ -2,6 +2,8 @@ package brokerServer;
 
 import io.netty.channel.ChannelHandlerContext;
 import model.*;
+import model.schema.Offsets;
+import model.schema.Records;
 import org.apache.avro.Schema;
 import org.apache.avro.reflect.ReflectData;
 import org.apache.log4j.Logger;
@@ -146,7 +148,7 @@ public class ProducerRecordHandler {
         //record의 사이즈가 최대치를 넘지 않으면 그대로 저장한다
         if (lastOffsetSize + newOffsetDataSize <= maxSegmentSize) {
             offsets.getOffsetDataList().add(newOffsetData);
-            writeAsyncFileChannel(lastOffsetFile, offsetSchema, offsets);
+            writeAsyncFileChannel(lastOffsetFile, offsetSchema, offsets, null);
         } else {
             logger.info("새 offset file을 생성합니다 ");
 
@@ -165,7 +167,7 @@ public class ProducerRecordHandler {
 
             newOffsets.getOffsetDataList().add(newOffsetData);
 
-            writeAsyncFileChannel(nextOffsetFile, offsetSchema, newOffsets);
+            writeAsyncFileChannel(nextOffsetFile, offsetSchema, newOffsets, null);
         }
 
     }
@@ -211,7 +213,7 @@ public class ProducerRecordHandler {
         if (lastLogSize + newRecordSize <= maxSegmentSize) {
             //현재 record file이 여유로울 때
             records.getRecords().add(newRecordData);
-            writeAsyncFileChannel(lastLogFile, recordsSchema, records);
+            writeAsyncFileChannel(lastLogFile, recordsSchema, records, producerRecord);
         } else {
             logger.info("새 로그 파일을 생성합니다.");
 
@@ -230,7 +232,7 @@ public class ProducerRecordHandler {
 
             newRecords.getRecords().add(newRecordData);
 
-            writeAsyncFileChannel(nextLogFile, recordsSchema, newRecords);
+            writeAsyncFileChannel(nextLogFile, recordsSchema, newRecords, producerRecord);
         }
 
         //offset 업데이트
@@ -266,7 +268,7 @@ public class ProducerRecordHandler {
     }
 
 
-    private void writeAsyncFileChannel(File file, Schema schema, Object value) throws IOException {
+    private void writeAsyncFileChannel(File file, Schema schema, Object value, ProducerRecord producerRecord) throws IOException {
 
         AsynchronousFileChannel asynchronousFileChannel = AsynchronousFileChannel.open(file.toPath(), EnumSet.of(StandardOpenOption.WRITE), executorService);
 
@@ -284,6 +286,12 @@ public class ProducerRecordHandler {
                 if (result == -1) {
                     logger.error("파일을 작성하면서 문제가 발생했습니다.");
                     return;
+                }
+
+                if (value instanceof Records) {
+                    TopicPartition topicPartition = new TopicPartition(producerRecord.getTopic(), producerRecord.getPartition());
+                    Records records = (Records) value;
+                    DataRepository.getInstance().setRecords(topicPartition, records.getRecords());
                 }
 
                 handlingAfterWriting(schema);

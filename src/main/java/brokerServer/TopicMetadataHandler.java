@@ -5,7 +5,7 @@ import io.netty.channel.ChannelHandlerContext;
 import model.AckData;
 import model.ProducerRecord;
 import model.Topic;
-import model.Topics;
+import model.schema.Topics;
 import model.response.ResponseTopicMetadata;
 import org.apache.avro.Schema;
 import org.apache.avro.reflect.ReflectData;
@@ -13,6 +13,7 @@ import org.apache.log4j.Logger;
 import util.AvroSerializers;
 
 import java.io.EOFException;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
@@ -27,13 +28,15 @@ import java.util.concurrent.Executors;
 public class TopicMetadataHandler extends AvroSerializers {
     private final Path defaultPath;
     private static final String TOPIC_LIST = "topicList";
+    private final String PARTITION = "partition";
     private final Logger logger = Logger.getLogger(TopicMetadataHandler.class);
     private final ExecutorService executorService;
     private final Properties properties;
 
+
     public TopicMetadataHandler(Properties properties) {
         int ioThread = Integer.parseInt(properties.getProperty(BrokerConfig.IO_THREAD.getValue()));
-        executorService = Executors.newFixedThreadPool(ioThread);
+        this.executorService = Executors.newFixedThreadPool(ioThread);
         this.defaultPath = Path.of(properties.getProperty(BrokerConfig.LOG_DIRS.getValue()));
         this.properties = properties;
     }
@@ -132,8 +135,23 @@ public class TopicMetadataHandler extends AvroSerializers {
                     logger.error("파일을 작성하면서 문제가 발생했습니다.");
                     return;
                 }
+
+                //brokerId directory에 partition개수만큼 디렉토리 생성
+                for (int partition = 0; partition < partitions; partition++) {
+                    Path topicPath = Path.of(defaultPath + "/" + "broker-" + brokerID + "/" + record.getTopic() + "/" + PARTITION + partition);
+                    if (!Files.exists(topicPath)) {
+                        try {
+                            Files.createDirectories(topicPath);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+
                 logger.info("성공적으로 토픽을 생성했습니다.");
-                ctx.channel().writeAndFlush(new ResponseTopicMetadata(record, newTopicMetadata));
+                if (ctx != null) {
+                    ctx.channel().writeAndFlush(new ResponseTopicMetadata(record, newTopicMetadata));
+                }
             }
 
             @Override

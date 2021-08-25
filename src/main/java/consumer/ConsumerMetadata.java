@@ -20,6 +20,7 @@ public class ConsumerMetadata {
     private MemberState status;
     private HashMap<ConsumerOffsetInfo, Integer> uncommittedOffset;
     private int recordSize;
+    private StringBuilder sb;
 
     public ConsumerMetadata() {
         logger = Logger.getLogger(ConsumerMetadata.class);
@@ -80,12 +81,15 @@ public class ConsumerMetadata {
 
     public void setTopicPartitions(List<TopicPartition> topicPartitions) {
         if (topicPartitions != null) {
+            sb = new StringBuilder();
             for (TopicPartition topicPartition : topicPartitions) {
                 this.topicPartitionAndOffset.put(topicPartition, 1);
+                sb.append(topicPartition.toString() + ",");
             }
-        }
-        else{
+            logger.info(sb.toString());
+        } else {
             logger.info("지정된 ownership이 존재하지 않습니다.");
+            System.exit(-1);
         }
     }
 

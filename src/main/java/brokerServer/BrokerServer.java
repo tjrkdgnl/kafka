@@ -4,9 +4,10 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import manager.NetworkManager;
+import model.ProducerRecord;
 import model.Topic;
 import model.TopicPartition;
-import model.Topics;
+import model.schema.Topics;
 import org.apache.log4j.Logger;
 
 import java.util.Properties;
@@ -20,10 +21,11 @@ public class BrokerServer {
     private final int port;
     private static Properties properties;
     private final ScheduledExecutorService executorService;
+    private final TopicMetadataHandler topicMetadataHandler;
 
     public BrokerServer(Properties brokerProperties) throws Exception {
         properties = brokerProperties;
-
+        topicMetadataHandler = new TopicMetadataHandler(properties);
         this.host = properties.getProperty(BrokerConfig.HOST.getValue());
         this.port = Integer.parseInt(properties.getProperty(BrokerConfig.PORT.getValue()));
         this.executorService = Executors.newScheduledThreadPool(1);
@@ -72,6 +74,11 @@ public class BrokerServer {
             logger.error("broker server를 실행하던 중 문제가 발생했습니다.", e);
             System.exit(-1);
         }
+    }
+
+    public void createTopic(String topic) throws Exception {
+
+        topicMetadataHandler.createTopic(null,new ProducerRecord(topic,""));
     }
 
     public static Properties getProperties() {

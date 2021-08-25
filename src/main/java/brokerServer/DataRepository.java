@@ -2,6 +2,7 @@ package brokerServer;
 
 import model.*;
 import model.request.RequestHeartbeat;
+import model.schema.Topics;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
@@ -38,7 +39,9 @@ public class DataRepository {
     }
 
     public void addTopic(Topic topic) {
-        this.topics.getTopicList().add(topic);
+        if(!topics.getTopicList().contains(topic)){
+            this.topics.getTopicList().add(topic);
+        }
     }
 
     public Topics getTopics() {
@@ -66,7 +69,7 @@ public class DataRepository {
     }
 
     public List<RecordData> getRecords(TopicPartition topicPartition) {
-        return new ArrayList<>(recordsMap.get(topicPartition));
+        return new ArrayList<>(recordsMap.getOrDefault(topicPartition,new ArrayList<>()));
     }
 
     public List<String> getConsumers(String groupId) {

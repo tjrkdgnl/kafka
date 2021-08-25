@@ -33,21 +33,25 @@ public class DataUtil {
     }
 
 
-    public static Object parsingBufToObject(ByteBuf buf) throws Exception {
-        int length = buf.readableBytes();
-        byte[] bytes = new byte[length];
+    public static Object parsingBufToObject(ByteBuf buf) {
+        try {
+            int length = buf.readableBytes();
+            byte[] bytes = new byte[length];
 
-        for (int i = 0; i < length; i++) {
-            bytes[i] = buf.getByte(i);
+            for (int i = 0; i < length; i++) {
+                bytes[i] = buf.getByte(i);
+            }
+
+            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+            ObjectInputStream ois = new ObjectInputStream(bis);
+
+            bis.close();
+            ois.close();
+
+            return ois.readObject();
+        } catch (Exception e) {
+            return null;
         }
-
-        ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-        ObjectInputStream ois = new ObjectInputStream(bis);
-
-        bis.close();
-        ois.close();
-
-        return ois.readObject();
     }
 
     public static void fileSort(File[] files) {

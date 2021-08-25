@@ -1,7 +1,7 @@
 package brokerServer;
 
 import model.RecordData;
-import model.Records;
+import model.schema.Records;
 import model.TopicPartition;
 import org.apache.avro.Schema;
 import org.apache.avro.reflect.ReflectData;

@@ -7,7 +7,6 @@ import model.response.ResponseCommit;
 import model.response.UpdateGroupInfo;
 import org.apache.log4j.Logger;
 import util.DataUtil;
-import util.ERROR;
 import util.MemberState;
 
 public class CommitInBoundHandler extends ChannelInboundHandlerAdapter {
@@ -42,8 +41,6 @@ public class CommitInBoundHandler extends ChannelInboundHandlerAdapter {
                         consumer.getFetcher().updateTopicPartitions(groupInfo.getConsumerGroup());
                         break;
                 }
-            } else {
-                logger.error(ERROR.UNKNOWN_ERROR);
             }
 
         } catch (Exception e) {

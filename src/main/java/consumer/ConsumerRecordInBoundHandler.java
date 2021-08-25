@@ -9,7 +9,6 @@ import model.response.ResponseConsumerRecords;
 import model.response.UpdateGroupInfo;
 import org.apache.log4j.Logger;
 import util.DataUtil;
-import util.ERROR;
 import util.MemberState;
 
 import java.util.HashMap;
@@ -55,8 +54,6 @@ public class ConsumerRecordInBoundHandler extends ChannelInboundHandlerAdapter {
                         consumer.getFetcher().updateTopicPartitions(groupInfo.getConsumerGroup());
                         break;
                 }
-            } else {
-                logger.error(ERROR.UNKNOWN_ERROR);
             }
 
         } catch (Exception e) {
