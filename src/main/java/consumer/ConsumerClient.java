@@ -34,6 +34,10 @@ public class ConsumerClient {
         this.subscribeState.setSubscriptions(topicPartitions);
     }
 
+    public void changeRecordData(int recordSize){
+        this.metadata.setRecordSize(recordSize);
+    }
+
 
     public boolean checkSubscription() {
         if (this.subscribeState.getSubscriptions() == null || this.subscribeState.getSubscriptions().isEmpty()) {

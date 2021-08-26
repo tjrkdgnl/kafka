@@ -78,6 +78,11 @@ public class KafkaConsumer {
         }
     }
 
+    public void changeRecordSize(int recordSize) {
+        ConsumerClient consumerClient = ConsumerManager.getInstance().getConsumer(consumerId);
+        consumerClient.changeRecordData(recordSize);
+    }
+
     public List<ConsumerRecord> poll() throws Exception {
 
         ConsumerManager.getInstance().poll(consumerId);

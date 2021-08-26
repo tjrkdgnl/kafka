@@ -34,8 +34,9 @@ public class ConsumerApplication {
 
             } else if (args.length == 5 && StringUtils.isNumeric(args[3].trim()) && StringUtils.isNumeric(args[4].trim())) {
                 int partiton = Integer.parseInt(args[3]);
+                int recordSize = Integer.parseInt(args[4]);
                 kafkaConsumer.assign(Arrays.asList(new TopicPartition(args[2].trim(), partiton)));
-                properties.put(ConsumerConfig.MAX_POLL_RECORDS.name(), args[4]);
+                kafkaConsumer.changeRecordSize(recordSize);
             } else {
                 logger.info("args를 잘못 입력 받았습니다.");
                 System.exit(-1);
