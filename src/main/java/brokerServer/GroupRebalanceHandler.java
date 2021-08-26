@@ -29,18 +29,30 @@ public class GroupRebalanceHandler {
             for (List<TopicPartition> assignedList : consumerGroup.getAssignedOwnershipMap().values()) {
                 for (TopicPartition topicPartition : message.getSubscriptions()) {
                     if (assignedList.contains(topicPartition)) {
-                       listener.setResult(RebalanceState.DUPLICATE_ASSIGN);
+                        listener.setResult(RebalanceState.DUPLICATE_ASSIGN);
                         return;
                     }
                 }
             }
 
+            //현재 broker에서 관리하고있는 topic list
+            Topics topics = dataRepository.getTopics();
 
             consumerGroup.setGroupId(message.getGroupId());
             consumerGroup.setRebalanceId(consumerGroup.getRebalanceId() + 1);
 
             //리밸런스를 위해서 topic을 구독하는 consumer 리스트를 생성한다
             for (TopicPartition topicPartition : message.getSubscriptions()) {
+
+                for (Topic topic : topics.getTopicList()) {
+                    if (topic.getTopic().equals(topicPartition.getTopic())) {
+                        if (topicPartition.getPartition() > topic.getPartitions()) {
+                            listener.setResult(RebalanceState.NO_PARTITION);
+                            return;
+                        }
+                    }
+                }
+
                 List<String> consumerList = consumerGroup.getTopicMap().getOrDefault(topicPartition.getTopic(), new ArrayList<>());
 
                 //구체적인 topic과 partition을 구독한 경우
@@ -57,8 +69,6 @@ public class GroupRebalanceHandler {
             //consumer들이 구독한 토픽들을 가져온다
             Set<String> subscriptionTopics = consumerGroup.getTopicMap().keySet();
 
-            //현재 broker에서 관리하고있는 topic list
-            Topics topics = dataRepository.getTopics();
 
             //현재 맵핑관계를 초기화시킨다
             consumerGroup.initOwnership();

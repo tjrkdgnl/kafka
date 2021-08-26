@@ -112,6 +112,9 @@ public class ConsumerGroupHandler {
                 case DUPLICATE_ASSIGN:
                     ctx.channel().writeAndFlush(new AckData(400, "해당 파티션은 이미 ownership이 존재합니다."));
                     break;
+                case NO_PARTITION:
+                    ctx.channel().writeAndFlush(new AckData(400, "해당 파티션은 존재하지 않습니다."));
+                    break;
                 case FAIL:
                     new AckData(400, "리밸런스를 진행하던 중 문제가 발생했습니다.");
                     break;
