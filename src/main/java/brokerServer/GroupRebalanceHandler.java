@@ -133,7 +133,7 @@ public class GroupRebalanceHandler {
 
             //하트비트를 통해 확인된 컨슈머들
             List<String> runningConsumers = DataRepository.getInstance().getConsumers(consumerGroup.getGroupId());
-            logger.info(runningConsumers);
+            logger.info(consumerGroup.getGroupId() + ": " + runningConsumers);
 
             //컨슈머 제거
             runningConsumers.forEach(consumersOutGroup::remove);

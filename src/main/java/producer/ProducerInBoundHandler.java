@@ -20,7 +20,6 @@ public class ProducerInBoundHandler extends ChannelInboundHandlerAdapter {
             Object obj = DataUtil.parsingBufToObject((ByteBuf) msg);
 
             if (obj instanceof ResponseTopicMetadata) {
-                logger.info("프로듀서가 브로커로부터 TopicMetaData를 받았습니다.");
                 ResponseTopicMetadata responseTopicData = (ResponseTopicMetadata) obj;
 
                 sender.send(ctx, responseTopicData.getProducerRecord(), responseTopicData.getTopicMetadata());
