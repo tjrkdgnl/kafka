@@ -8,13 +8,13 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import manager.NetworkManager;
 import model.ProducerRecord;
+import model.request.RequestTopicMetaData;
 import org.apache.log4j.Logger;
 
 
 public class KafkaProducer {
     private ChannelFuture channelFuture;
     private final Logger logger = Logger.getLogger(KafkaProducer.class);
-    public static final Sender sender = new Sender();
 
     public KafkaProducer(String host, int port) throws Exception {
         start(host, port);
@@ -48,7 +48,7 @@ public class KafkaProducer {
         } else if (record.getTopic() == null) {
             throw new NullPointerException("topic이 존재하지 않습니다.");
         } else {
-            sender.getTopicMetaData(channelFuture, record);
+            channelFuture.channel().writeAndFlush(new RequestTopicMetaData(record));
         }
     }
 

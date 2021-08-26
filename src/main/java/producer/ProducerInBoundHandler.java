@@ -7,12 +7,11 @@ import model.AckData;
 import model.response.ResponseTopicMetadata;
 import org.apache.log4j.Logger;
 import util.DataUtil;
-import util.ERROR;
 
 
 public class ProducerInBoundHandler extends ChannelInboundHandlerAdapter {
     private final Logger logger = Logger.getLogger(ProducerInBoundHandler.class);
-
+    private final Sender sender = new Sender();
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -24,7 +23,7 @@ public class ProducerInBoundHandler extends ChannelInboundHandlerAdapter {
                 logger.info("프로듀서가 브로커로부터 TopicMetaData를 받았습니다.");
                 ResponseTopicMetadata responseTopicData = (ResponseTopicMetadata) obj;
 
-                KafkaProducer.sender.send(ctx,responseTopicData.getProducerRecord(),responseTopicData.getTopicMetadata());
+                sender.send(ctx, responseTopicData.getProducerRecord(), responseTopicData.getTopicMetadata());
 
             } else if (obj instanceof AckData) {
                 AckData ack = (AckData) obj;
