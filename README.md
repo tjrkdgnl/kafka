@@ -89,9 +89,10 @@
 
 
 ## 배운점
-- Netty를 통해 client, server 구조를 쉽게 만들 수 있었으며, 소켓 프로그래밍을 통한 데이터를 주고 받는 처리를 경험할 수 있었다
+- **Netty**를 통해 client, server 구조를 쉽게 만들 수 있었으며, **비동기 소켓 프로그래밍**을 통한 데이터를 주고 받는 처리를 경험할 수 있었다.
 
-- file system을 이용하여 MetaData 저장하고 관리하는 방법을 공부할 수 있었다
-- 멀티 스레딩 환경에서 발생하는 data 일관성 문제를 겪게 되었고 이를 해결하기 위한 방법으로 ConcurrentHashMap을 사용하는 등 멀티 스레딩 환경 이슈를 해결해 볼 수 있었다
-- 개발을 위해 Component diagram, class diagram, sequential diagram 등을 작성하여 flow를 설계를 확실하게 하면 개발 기간이 더 단축되어 빠르게 개발 할 수 있는 것을 
+- **file system**을 이용하여 MetaData 저장하고 관리하는 방법을 공부할 수 있었다.
+- **멀티 스레딩** 환경에서 발생하는 data 일관성 문제를 겪게 되었고 이를 해결하기 위한 방법으로 ConcurrentHashMap을 사용하는 등 멀티 스레딩 환경 이슈를 해결해 볼 수 있었다.
+- 개발을 위해 **Component diagram**, **Class diagram**, **Sequential diagram** 등 다이어그램을 먼저 작성하여 설계하는 것이 개발 시간을 더 단축시킬 수 있는 것을 깨닫게 되었다.
+- **git flow**를 통해  feature 별로 branch를 생성하고 PR 작성 및 merge를 사용하여 프로젝트를 효율적으로 관리하는 방법에 대해서 배우게 되었다. 
 
